@@ -1,25 +1,42 @@
-# 💰 FinAgent: Autonomous Personal Finance AI
+# 🤖 FinAgent: Enterprise Multi-Agent Financial AI
 
-An enterprise-grade, autonomous financial dashboard powered by a LangGraph agentic loop and Gemini 3.6-flash. This application merges a custom Python/Streamlit frontend with a local SQLite database to execute dynamic database reads/writes, time-series visualizations, and complex financial math routing entirely through natural language.
+FinAgent is a multi-page, enterprise-grade financial analytics application built with **Streamlit** and powered by a **LangGraph Multi-Agent Supervisor Network**. It allows users to track expenses, ingest raw CSV data for autonomous analysis, and generate predictive financial forecasts using pure mathematical regression.
 
-## 🚀 Key Engineering Features
+## 🚀 Core Architecture & Features
 
-* **Autonomous Tool Routing (LangGraph):** The agent autonomously chains multiple custom Python tools (`log_expense`, `fetch_expenses`, `calculate_savings`, `check_goal_feasibility`) to solve multi-step financial queries without human intervention.
-* **Context Injection:** Seamlessly feeds user state (income, active goals) from the UI sidebar directly into the LLM's system prompt for state-aware reasoning.
-* **Agent Execution Inspector:** Features a transparent "Thought Process" drawer in the UI that exposes the raw JSON tool-calls and intermediate graph steps, demonstrating full architectural transparency.
-* **Executive Visualization:** Implements dynamic Plotly donut and time-series line charts, housed in custom CSS container cards mimicking enterprise BI tools.
-* **Persistent State Management:** Reads and writes securely to a local SQLite database (`finagent.db`) with full data export (CSV) capabilities.
+### 🕸️ 1. Multi-Agent Supervisor Network (LangGraph v0.3+)
+At the core of FinAgent is a state-based multi-agent routing system. A Supervisor LLM evaluates the user's intent and routes tasks to specialized sub-agents:
+*   **[Data Analyst Agent]:** Equipped with custom Python tools to directly read/write to the SQLite database, calculate exact savings, and analyze injected raw CSV data.
+*   **[Wealth Manager Agent]:** Specialized in lifestyle budgeting, goal feasibility forecasting, and providing actionable financial advice based on the user's cash flow.
+
+### 📈 2. Pure-Math Predictive Analytics
+To ensure cross-platform compatibility and bypass rigid Windows C-extension security policies (which often block heavy libraries like `scikit-learn` and `statsmodels`), the 30-Day Predictive Spending Model is built from scratch. It utilizes pure Pandas to calculate Ordinary Least Squares (OLS) linear regression:
+$$m = \frac{\sum (x - \bar{x})(y - \bar{y})}{\sum (x - \bar{x})^2}$$
+$$c = \bar{y} - m\bar{x}$$
+The resulting trendline is visualized dynamically using Plotly.
+
+### 📂 3. Universal Data Ingestion (RAG Alternative)
+The AI includes a universal CSV file uploader in the sidebar. When a user uploads a bank statement or dataset, the app converts it and seamlessly injects it into the LLM's conversational memory, allowing the Data Analyst to perform custom queries on external, real-time data.
+
+### 📑 4. Enterprise Excel Reporting
+Users can instantly export their tracked SQLite database records into a cleanly formatted, styled `.xlsx` financial report generated via `openpyxl`.
+
+---
 
 ## 🛠️ Tech Stack
-* **LLM Orchestration:** LangChain, LangGraph
-* **Model:** Google Gemini 3.6-flash
-* **Frontend:** Streamlit, Custom CSS
-* **Data Visualization:** Pandas, Plotly Express
-* **Database:** SQLite3
+*   **Frontend UI:** Streamlit
+*   **AI Orchestration:** LangChain, LangGraph
+*   **LLM Engine:** Google Gemini (gemini-3.6-flash)
+*   **Data Science:** Pandas, NumPy
+*   **Visualization:** Plotly Express
+*   **Database:** SQLite3
+*   **File I/O:** OpenPyXL, IO
 
-## 💻 How to Run Locally
+---
 
-1. Clone the repository:
+## 💻 Installation & Setup
+
+1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/YourUsername/FinAgent.git](https://github.com/Vaibhav242918/FinAgent.git)
+   git clone [https://github.com/yourusername/FinAgent.git](https://github.com/Vaibhav242918/FinAgent.git)
    cd FinAgent
