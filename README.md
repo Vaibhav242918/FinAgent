@@ -38,5 +38,5 @@ Users can instantly export their tracked SQLite database records into a cleanly 
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/yourusername/FinAgent.git](https://github.com/Vaibhav242918/FinAgent.git)
+   git clone [https://github.com/Vaibhav242918/FinAgent.git](https://github.com/Vaibhav242918/FinAgent.git)
    cd FinAgent

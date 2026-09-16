@@ -57,7 +57,7 @@ class AgentState(TypedDict):
     next: str
 
 # 3. Initialize the Core LLM
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
 
 # 4. Define the Agents (BROADER PROMPTS)
 analyst_tools = [fetch_expenses, calculate_savings, log_expense, delete_last_expense]
