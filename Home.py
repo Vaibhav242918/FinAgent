@@ -4,6 +4,22 @@ import streamlit as st
 import sqlite3
 from datetime import datetime
 
+# --- INITIALIZE DATABASE FOR CLOUD ---
+def init_db():
+    conn = sqlite3.connect("finagent.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            category TEXT,
+            amount REAL,
+            date TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
 # 1. Page Configuration & CSS
 st.set_page_config(page_title="FinAgent - Dashboard", page_icon="📊", layout="wide")
 st.markdown("""
@@ -73,7 +89,10 @@ cursor = conn.cursor()
 cursor.execute("SELECT SUM(amount) FROM expenses")
 total_expenses = cursor.fetchone()[0] or 0
 current_savings = st.session_state['monthly_income'] - total_expenses
-progress_pct = max(0, min(100, int((current_savings / st.session_state['goal_target']) * 100)))
+
+# Prevent division by zero just in case
+goal_target = max(1, st.session_state['goal_target'])
+progress_pct = max(0, min(100, int((current_savings / goal_target) * 100)))
 
 # 4. KPI Top Row
 with st.container(border=True):

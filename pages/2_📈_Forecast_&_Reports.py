@@ -8,12 +8,28 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from datetime import datetime, timedelta
 
+# --- INITIALIZE DATABASE FOR CLOUD ---
+def init_db():
+    conn = sqlite3.connect("finagent.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            category TEXT,
+            amount REAL,
+            date TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
 st.set_page_config(page_title="FinAgent - Forecast", page_icon="📈", layout="wide")
 st.title("📈 Machine Learning Forecast & Reports")
 st.markdown("Predict future spending trends and export enterprise-grade reports.")
 st.divider()
 
-# --- NEW: DASHBOARD CONTROLS (CLEAR DATA) ---
+# --- DASHBOARD CONTROLS (CLEAR DATA) ---
 with st.sidebar:
     st.header("⚙️ Dashboard Controls")
     st.markdown("Use this to wipe your old database records and reset the charts.")
@@ -32,14 +48,18 @@ with st.sidebar:
 # 1. Fetch Data from SQLite Database
 def get_historical_data():
     conn = sqlite3.connect("finagent.db")
-    df = pd.read_sql_query("SELECT date, category, amount FROM expenses ORDER BY date", conn)
+    try:
+        df = pd.read_sql_query("SELECT date, category, amount FROM expenses ORDER BY date", conn)
+    except Exception:
+        # Fallback if the table is completely empty/just initialized
+        df = pd.DataFrame(columns=["date", "category", "amount"])
     conn.close()
     return df
 
 df = get_historical_data()
 
 if df.empty:
-    st.warning("⚠️ No data available. Log some expenses or upload a file first!")
+    st.warning("⚠️ No data available. Log some expenses on the Home page first!")
 else:
     # --- OPTION 1: PURE MATH FORECAST ---
     st.header("🤖 30-Day Predictive Spending Model")
