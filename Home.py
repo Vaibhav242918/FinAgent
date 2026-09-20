@@ -15,7 +15,7 @@ def check_hashes(password, hashed_text):
 
 # --- INITIALIZE MULTI-TENANT DATABASE ---
 def init_db():
-    conn = sqlite3.connect("finagent_v2.db") # 👈 Forces a fresh cloud database
+    conn = sqlite3.connect("finagent_v2.db") 
     cursor = conn.cursor()
     
     # Users Table
@@ -25,7 +25,7 @@ def init_db():
             password TEXT
         )
     """)
-    # Expenses Table (Now includes 'username' for data isolation)
+    # Expenses Table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,49 +89,54 @@ if not st.session_state['logged_in']:
     st.title("🧠 FinAgent: Secure Access")
     st.markdown("Authenticate to access autonomous intelligence telemetry.")
     
-    col1, col2 = st.columns(2)
+    # Create a clean, centered layout so the boxes don't stretch across the wide screen
+    _, col_auth, _ = st.columns([1, 2, 1])
     
-    with col1:
-        st.subheader("Login")
-        with st.form("login_form"):
-            login_user = st.text_input("Username")
-            login_pass = st.text_input("Password", type="password")
-            submit_login = st.form_submit_button("Initialize Session")
-            
-            if submit_login:
-                conn = sqlite3.connect("finagent_v2.db")
-                cursor = conn.cursor()
-                cursor.execute('SELECT password FROM users WHERE username=?', (login_user,))
-                result = cursor.fetchone()
-                conn.close()
+    with col_auth:
+        # Toggle between Sign In and Sign Up
+        auth_mode = st.radio("Select Authorization Mode:", ["Sign In", "Sign Up"], horizontal=True)
+        
+        if auth_mode == "Sign In":
+            st.subheader("Login")
+            with st.form("login_form"):
+                login_user = st.text_input("Username")
+                login_pass = st.text_input("Password", type="password")
+                submit_login = st.form_submit_button("Initialize Session", use_container_width=True)
                 
-                if result and check_hashes(login_pass, result[0]):
-                    st.session_state['logged_in'] = True
-                    st.session_state['username'] = login_user
-                    st.success(f"Authentication successful. Welcome, {login_user}.")
-                    st.rerun()
-                else:
-                    st.error("Access Denied: Invalid credentials.")
+                if submit_login:
+                    conn = sqlite3.connect("finagent_v2.db")
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT password FROM users WHERE username=?', (login_user,))
+                    result = cursor.fetchone()
+                    conn.close()
+                    
+                    if result and check_hashes(login_pass, result[0]):
+                        st.session_state['logged_in'] = True
+                        st.session_state['username'] = login_user
+                        st.success(f"Authentication successful. Welcome, {login_user}.")
+                        st.rerun()
+                    else:
+                        st.error("Access Denied: Invalid credentials.")
 
-    with col2:
-        st.subheader("Register New Operator")
-        with st.form("register_form"):
-            new_user = st.text_input("New Username")
-            new_pass = st.text_input("New Password", type="password")
-            submit_register = st.form_submit_button("Register Clearance")
-            
-            if submit_register:
-                conn = sqlite3.connect("finagent_v2.db")
-                cursor = conn.cursor()
-                cursor.execute('SELECT username FROM users WHERE username=?', (new_user,))
-                if cursor.fetchone():
-                    st.warning("Username already allocated.")
-                else:
-                    hashed_pass = make_hashes(new_pass)
-                    cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (new_user, hashed_pass))
-                    conn.commit()
-                    st.success("Registration complete. You may now login.")
-                conn.close()
+        elif auth_mode == "Sign Up":
+            st.subheader("Register New Operator")
+            with st.form("register_form"):
+                new_user = st.text_input("New Username")
+                new_pass = st.text_input("New Password", type="password")
+                submit_register = st.form_submit_button("Register Clearance", use_container_width=True)
+                
+                if submit_register:
+                    conn = sqlite3.connect("finagent_v2.db")
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT username FROM users WHERE username=?', (new_user,))
+                    if cursor.fetchone():
+                        st.warning("Username already allocated.")
+                    else:
+                        hashed_pass = make_hashes(new_pass)
+                        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (new_user, hashed_pass))
+                        conn.commit()
+                        st.success("Registration complete. Please switch to 'Sign In' to access your dashboard.")
+                    conn.close()
 
 # ==========================================
 #         MAIN DASHBOARD (SECURE)
@@ -286,13 +291,11 @@ else:
     # ==========================================
     #      🛡️ TOP SECRET: ADMIN CONSOLE
     # ==========================================
-    # This entire section is invisible to normal users
     if st.session_state['username'] in ['admin', 'vaibhav2429']:
         st.divider()
         st.markdown("<h3 style='color: #FF007F;'>🛡️ Override: Administrator Console</h3>", unsafe_allow_html=True)
         st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant data.")
         
-        # Create three sleek tabs for the Admin tools
         tab_users, tab_data, tab_backup = st.tabs(["👥 User Credentials", "🌐 Global Telemetry", "💾 Database Download"])
         
         with tab_users:
@@ -313,7 +316,6 @@ else:
             st.markdown("#### Cloud Database Extraction")
             st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
             
-            # Read the raw .db file as binary data
             try:
                 with open("finagent_v2.db", "rb") as file:
                     st.download_button(
