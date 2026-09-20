@@ -15,7 +15,7 @@ def check_hashes(password, hashed_text):
 
 # --- INITIALIZE MULTI-TENANT DATABASE (V6) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v6.db") # 👈 Upgraded to V6 for Support Alerts table
+    conn = sqlite3.connect("finagent_v6.db") 
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -38,7 +38,6 @@ def init_db():
             date TEXT
         )
     """)
-    # 👈 New table to log user lockout alerts for the admin
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS support_alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,13 +195,13 @@ if not st.session_state['logged_in']:
                         st.error("Verification failed. Account not found or incorrect PIN.")
                     conn.close()
             
-            # 👈 Interactive Lockout Alert Form (Replaces static text so button is fully clickable)
+            # Lockout Alert Form with 5-Hour Temporary Credential Protocol
             with st.form("lockout_alert_form", clear_on_submit=True):
                 st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both password and PIN?</p>", unsafe_allow_html=True)
-                st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your username or email below to instantly alert admin (vaibhav2429) for a manual override.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your details to notify admin and generate temporary fallback credentials.</p>", unsafe_allow_html=True)
                 
                 alert_user = st.text_input("Your Username / Email / Mobile")
-                submit_alert = st.form_submit_button("Notify Admin of Lockout")
+                submit_alert = st.form_submit_button("Request Emergency Temporary Access")
                 
                 if submit_alert:
                     if not alert_user:
@@ -214,7 +213,10 @@ if not st.session_state['logged_in']:
                                              (alert_user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "PENDING"))
                         conn_alert.commit()
                         conn_alert.close()
-                        st.success("Alert transmitted to Admin console successfully! Please await manual override.")
+                        
+                        # Display instant temporary credentials message
+                        st.success("Alert logged! Your emergency temporary credentials have been generated:")
+                        st.info("🔑 **Temporary Password:** `user@11`\n\n🔢 **Temporary PIN:** `1111`\n\n⏳ **Notice:** Please use these credentials to log in **after 5 hours**. Ensure you update them immediately once inside!")
 
 # ==========================================
 #         MAIN DASHBOARD (DEEP TECH UI)
@@ -430,7 +432,6 @@ else:
         st.markdown("<h3 style='color: #FF007F;'>🛡️ Override: Administrator Console</h3>", unsafe_allow_html=True)
         st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant device telemetry and password hashes.")
         
-        # 👈 Added "🚨 Support Alerts" tab so admin can see who is locked out
         tab_users, tab_alerts, tab_data, tab_backup = st.tabs(["👥 User Credentials", "🚨 Support Alerts", "🌐 Global Telemetry", "💾 Database Download"])
         
         with tab_users:
@@ -468,7 +469,7 @@ else:
                             
         with tab_alerts:
             st.markdown("#### 🚨 Incoming User Lockout & Support Alerts")
-            st.info("When users forget both their password and recovery PIN, their alert requests appear here.")
+            st.info("When users request emergency access, their alert logs appear here so you can update their credentials within the 5-hour window.")
             conn_admin = sqlite3.connect("finagent_v6.db")
             df_alerts = pd.read_sql_query("SELECT * FROM support_alerts ORDER BY id DESC", conn_admin)
             conn_admin.close()
