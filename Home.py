@@ -15,8 +15,9 @@ def check_hashes(password, hashed_text):
 
 # --- INITIALIZE MULTI-TENANT DATABASE ---
 def init_db():
-    conn = sqlite3.connect("finagent.db")
+    conn = sqlite3.connect("finagent_v2.db") # 👈 Forces a fresh cloud database
     cursor = conn.cursor()
+    
     # Users Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -98,7 +99,7 @@ if not st.session_state['logged_in']:
             submit_login = st.form_submit_button("Initialize Session")
             
             if submit_login:
-                conn = sqlite3.connect("finagent.db")
+                conn = sqlite3.connect("finagent_v2.db")
                 cursor = conn.cursor()
                 cursor.execute('SELECT password FROM users WHERE username=?', (login_user,))
                 result = cursor.fetchone()
@@ -120,7 +121,7 @@ if not st.session_state['logged_in']:
             submit_register = st.form_submit_button("Register Clearance")
             
             if submit_register:
-                conn = sqlite3.connect("finagent.db")
+                conn = sqlite3.connect("finagent_v2.db")
                 cursor = conn.cursor()
                 cursor.execute('SELECT username FROM users WHERE username=?', (new_user,))
                 if cursor.fetchone():
@@ -163,7 +164,7 @@ else:
             submitted = st.form_submit_button("Inject Data", use_container_width=True)
             
             if submitted:
-                conn = sqlite3.connect("finagent.db")
+                conn = sqlite3.connect("finagent_v2.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
                 # SECURITY: Insert with username
@@ -175,7 +176,7 @@ else:
                 st.rerun()
 
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
-            conn = sqlite3.connect("finagent.db")
+            conn = sqlite3.connect("finagent_v2.db")
             cursor = conn.cursor()
             # SECURITY: Only delete the active user's last entry
             cursor.execute("SELECT id FROM expenses WHERE username=? ORDER BY id DESC LIMIT 1", (st.session_state['username'],))
@@ -187,7 +188,7 @@ else:
             st.rerun()
 
     # 3. Data Fetching (Filtered by Username)
-    conn = sqlite3.connect("finagent.db")
+    conn = sqlite3.connect("finagent_v2.db")
     df_all = pd.read_sql_query("SELECT * FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
     conn.close()
 
