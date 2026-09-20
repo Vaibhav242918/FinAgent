@@ -282,3 +282,46 @@ else:
                 "amount": st.column_config.NumberColumn("Volume (₹)", format="₹%d")
             }
         )
+        
+    # ==========================================
+    #      🛡️ TOP SECRET: ADMIN CONSOLE
+    # ==========================================
+    # This entire section is invisible to normal users
+    if st.session_state['username'] in ['admin', 'vaibhav2429']:
+        st.divider()
+        st.markdown("<h3 style='color: #FF007F;'>🛡️ Override: Administrator Console</h3>", unsafe_allow_html=True)
+        st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant data.")
+        
+        # Create three sleek tabs for the Admin tools
+        tab_users, tab_data, tab_backup = st.tabs(["👥 User Credentials", "🌐 Global Telemetry", "💾 Database Download"])
+        
+        with tab_users:
+            st.markdown("#### Registered Users Table")
+            conn_admin = sqlite3.connect("finagent_v2.db")
+            df_users = pd.read_sql_query("SELECT * FROM users", conn_admin)
+            conn_admin.close()
+            st.dataframe(df_users, use_container_width=True)
+            
+        with tab_data:
+            st.markdown("#### Global Expenses (All Users)")
+            conn_admin = sqlite3.connect("finagent_v2.db")
+            df_global_expenses = pd.read_sql_query("SELECT * FROM expenses", conn_admin)
+            conn_admin.close()
+            st.dataframe(df_global_expenses, use_container_width=True)
+            
+        with tab_backup:
+            st.markdown("#### Cloud Database Extraction")
+            st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
+            
+            # Read the raw .db file as binary data
+            try:
+                with open("finagent_v2.db", "rb") as file:
+                    st.download_button(
+                        label="⬇️ Download finagent_v2.db",
+                        data=file,
+                        file_name=f"finagent_v2_backup_{datetime.now().strftime('%Y%m%d')}.db",
+                        mime="application/x-sqlite3",
+                        use_container_width=True
+                    )
+            except FileNotFoundError:
+                st.error("Database file not found on the server yet.")
