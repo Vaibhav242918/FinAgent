@@ -7,6 +7,57 @@ import hashlib
 import re
 from datetime import datetime
 
+# --- INITIALIZE MULTI-TENANT DATABASE (V7) WITH AUTO-ADMIN SEEDING ---
+def init_db():
+    conn = sqlite3.connect("finagent_v7.db") 
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            email TEXT UNIQUE,
+            mobile TEXT UNIQUE,
+            password TEXT,
+            recovery_pin TEXT,
+            ip_address TEXT,
+            device_info TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            category TEXT,
+            amount REAL,
+            date TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            identifier TEXT,
+            timestamp TEXT,
+            status TEXT
+        )
+    """)
+    
+    # 👈 Auto-seed Admin Account so you never get locked out
+    admin_user = "vaibhav2429"
+    admin_email = "admin@finagent.com"
+    admin_mobile = "9999999999"
+    admin_pass = make_hashes("Admin@123") # Default complex password matching validation rules
+    admin_pin = "2429"
+    
+    cursor.execute("""
+        INSERT OR IGNORE INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (admin_user, admin_email, admin_mobile, admin_pass, admin_pin, "127.0.0.1", "Admin-Terminal"))
+    
+    conn.commit()
+    conn.close()
+
+init_db()
+
 # --- SECURITY: Password Hashing ---
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
