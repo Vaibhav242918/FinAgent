@@ -1,4 +1,9 @@
 import streamlit as st
+
+# --- SECURITY GATEWAY ---
+if not st.session_state.get('logged_in', False):
+    st.error("🔒 Unauthorized Access. Please log in on the Home page first.")
+    st.stop()
 import pandas as pd
 import numpy as np
 import sqlite3

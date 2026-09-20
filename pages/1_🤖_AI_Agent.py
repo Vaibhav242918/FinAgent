@@ -1,4 +1,9 @@
 import streamlit as st
+
+# --- SECURITY GATEWAY ---
+if not st.session_state.get('logged_in', False):
+    st.error("🔒 Unauthorized Access. Please log in on the Home page first.")
+    st.stop() # This instantly halts the script so nothing else loads
 import pandas as pd
 import operator
 from typing import TypedDict, Annotated, Sequence
