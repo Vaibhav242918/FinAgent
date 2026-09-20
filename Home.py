@@ -17,15 +17,12 @@ def check_hashes(password, hashed_text):
 def init_db():
     conn = sqlite3.connect("finagent_v2.db") 
     cursor = conn.cursor()
-    
-    # Users Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT
         )
     """)
-    # Expenses Table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,41 +37,8 @@ def init_db():
 
 init_db()
 
-# 1. Page Configuration & Glowing CSS
+# 1. Page Configuration (Must be first)
 st.set_page_config(page_title="FinAgent - Executive AI", page_icon="🧠", layout="wide")
-st.markdown("""
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Subdued Buttons */
-    .stButton>button {
-        border-radius: 6px;
-        font-weight: bold;
-        border: 1px solid rgba(0, 229, 255, 0.5);
-        color: #00E5FF;
-        background-color: transparent;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 5px rgba(0, 229, 255, 0.1);
-    }
-    .stButton>button:hover {
-        background-color: rgba(0, 229, 255, 0.1);
-        color: #00E5FF;
-        border: 1px solid #00E5FF;
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
-    }
-    
-    /* Cyber-Glassmorphism Metrics */
-    [data-testid="stMetric"] {
-        background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(0, 229, 255, 0.15);
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
 # --- SESSION STATE MANAGEMENT ---
 if 'logged_in' not in st.session_state:
@@ -83,25 +47,66 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#         AUTHENTICATION GATEWAY
+#         AUTHENTICATION GATEWAY (UNIQUE UI)
 # ==========================================
 if not st.session_state['logged_in']:
-    st.title("🧠 FinAgent: Secure Access")
-    st.markdown("Authenticate to access autonomous intelligence telemetry.")
+    # EXCLUSIVE LOGIN PAGE CSS
+    st.markdown("""
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        
+        /* 1. Hide the sidebar completely on the login page */
+        [data-testid="collapsedControl"] {display: none;}
+        [data-testid="stSidebar"] {display: none;}
+        
+        /* 2. Center the main titles */
+        .auth-title {text-align: center; color: #00E5FF; font-size: 3rem; font-weight: 800; margin-bottom: 0px;}
+        .auth-subtitle {text-align: center; color: #E2E8F0; font-size: 1.1rem; margin-bottom: 40px;}
+        
+        /* 3. Style the login form as a Cyber-Security Card */
+        div[data-testid="stForm"] {
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
+        }
+        
+        /* 4. Glowing Login Buttons */
+        .stButton>button {
+            border-radius: 6px;
+            font-weight: bold;
+            border: 1px solid #00E5FF;
+            color: #00E5FF;
+            background-color: transparent;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .stButton>button:hover {
+            background-color: #00E5FF;
+            color: #070A15;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+        }
+        </style>
+        """, unsafe_allow_html=True)
     
-    # Create a clean, centered layout so the boxes don't stretch across the wide screen
-    _, col_auth, _ = st.columns([1, 2, 1])
+    # Render Centered Headers
+    st.markdown("<h1 class='auth-title'>🧠 FinAgent Security</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='auth-subtitle'>Level 5 Telemetry Access Gateway</p>", unsafe_allow_html=True)
+    
+    # Center the auth box tightly
+    _, col_auth, _ = st.columns([1, 1.2, 1])
     
     with col_auth:
-        # Toggle between Sign In and Sign Up
-        auth_mode = st.radio("Select Authorization Mode:", ["Sign In", "Sign Up"], horizontal=True)
+        auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up"], horizontal=True)
         
         if auth_mode == "Sign In":
-            st.subheader("Login")
             with st.form("login_form"):
+                st.markdown("### 🔐 Operator Login")
                 login_user = st.text_input("Username")
                 login_pass = st.text_input("Password", type="password")
-                submit_login = st.form_submit_button("Initialize Session", use_container_width=True)
+                submit_login = st.form_submit_button("Initialize Session")
                 
                 if submit_login:
                     conn = sqlite3.connect("finagent_v2.db")
@@ -113,17 +118,16 @@ if not st.session_state['logged_in']:
                     if result and check_hashes(login_pass, result[0]):
                         st.session_state['logged_in'] = True
                         st.session_state['username'] = login_user
-                        st.success(f"Authentication successful. Welcome, {login_user}.")
                         st.rerun()
                     else:
                         st.error("Access Denied: Invalid credentials.")
 
         elif auth_mode == "Sign Up":
-            st.subheader("Register New Operator")
             with st.form("register_form"):
+                st.markdown("### 📝 Request Clearance")
                 new_user = st.text_input("New Username")
                 new_pass = st.text_input("New Password", type="password")
-                submit_register = st.form_submit_button("Register Clearance", use_container_width=True)
+                submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
                     conn = sqlite3.connect("finagent_v2.db")
@@ -135,13 +139,48 @@ if not st.session_state['logged_in']:
                         hashed_pass = make_hashes(new_pass)
                         cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (new_user, hashed_pass))
                         conn.commit()
-                        st.success("Registration complete. Please switch to 'Sign In' to access your dashboard.")
+                        st.success("Registration complete. Please switch to 'Sign In'.")
                     conn.close()
 
 # ==========================================
-#         MAIN DASHBOARD (SECURE)
+#         MAIN DASHBOARD (DEEP TECH UI)
 # ==========================================
 else:
+    # EXCLUSIVE DASHBOARD CSS
+    st.markdown("""
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        
+        /* Subdued Dashboard Buttons */
+        .stButton>button {
+            border-radius: 6px;
+            font-weight: bold;
+            border: 1px solid rgba(0, 229, 255, 0.5);
+            color: #00E5FF;
+            background-color: transparent;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 5px rgba(0, 229, 255, 0.1);
+        }
+        .stButton>button:hover {
+            background-color: rgba(0, 229, 255, 0.1);
+            color: #00E5FF;
+            border: 1px solid #00E5FF;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+        }
+        
+        /* Cyber-Glassmorphism Metrics */
+        [data-testid="stMetric"] {
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
     st.title(f"🧠 FinAgent: Telemetry for {st.session_state['username']}")
     
     col_title, col_logout = st.columns([8, 1])
@@ -172,7 +211,6 @@ else:
                 conn = sqlite3.connect("finagent_v2.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
-                # SECURITY: Insert with username
                 cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', 
                                (st.session_state['username'], exp_category, exp_amount, date_str))
                 conn.commit()
@@ -183,7 +221,6 @@ else:
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
             conn = sqlite3.connect("finagent_v2.db")
             cursor = conn.cursor()
-            # SECURITY: Only delete the active user's last entry
             cursor.execute("SELECT id FROM expenses WHERE username=? ORDER BY id DESC LIMIT 1", (st.session_state['username'],))
             last_exp = cursor.fetchone()
             if last_exp:
@@ -192,7 +229,7 @@ else:
             conn.close()
             st.rerun()
 
-    # 3. Data Fetching (Filtered by Username)
+    # 3. Data Fetching
     conn = sqlite3.connect("finagent_v2.db")
     df_all = pd.read_sql_query("SELECT * FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
     conn.close()
@@ -315,7 +352,6 @@ else:
         with tab_backup:
             st.markdown("#### Cloud Database Extraction")
             st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
-            
             try:
                 with open("finagent_v2.db", "rb") as file:
                     st.download_button(
