@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import sqlite3
 import hashlib
+from datetime import datetime  # 👈 Added missing datetime import
 
 # --- SECURITY: Password Hashing ---
 def make_hashes(password):
