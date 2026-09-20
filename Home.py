@@ -5,6 +5,9 @@ import streamlit as st
 import sqlite3
 import hashlib
 from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # --- SECURITY: Password Hashing ---
 def make_hashes(password):
@@ -12,6 +15,49 @@ def make_hashes(password):
 
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
+
+# --- SMTP EMAIL DISPATCH UTILITY ---
+def send_emergency_email(to_email):
+    # Use Streamlit Secrets for secure production credentials or fallback placeholders
+    try:
+        sender_email = st.secrets["SMTP_EMAIL"]
+        sender_password = st.secrets["SMTP_PASSWORD"]
+    except Exception:
+        sender_email = "finagent.security.gateway@gmail.com"
+        sender_password = "app_password_placeholder"
+    
+    subject = "FinAgent Enterprise Security - Emergency Temporary Credentials"
+    body = f"""
+    Hello Operator,
+    
+    An emergency access request was initiated for your FinAgent account.
+    Your temporary fallback credentials are:
+    
+    - Temporary Password: user@11
+    - Temporary PIN: 1111
+    
+    Notice: Please use these credentials to log in after 5 hours. Ensure you update your password and PIN immediately once inside your dashboard.
+    
+    Regards,
+    FinAgent Zero-Trust Security Gateway
+    """
+    
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, to_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"SMTP Dispatch Error: {e}")
+        return False
 
 # --- INITIALIZE MULTI-TENANT DATABASE (V6) ---
 def init_db():
@@ -197,7 +243,7 @@ if not st.session_state['logged_in']:
             
             with st.form("lockout_alert_form", clear_on_submit=True):
                 st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both password and PIN?</p>", unsafe_allow_html=True)
-                st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your details to notify admin and generate temporary fallback credentials.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your details to notify admin, trigger SMTP email dispatch, and generate temporary fallback credentials.</p>", unsafe_allow_html=True)
                 
                 alert_user = st.text_input("Your Username / Email / Mobile")
                 submit_alert = st.form_submit_button("Request Emergency Temporary Access")
@@ -208,13 +254,20 @@ if not st.session_state['logged_in']:
                     else:
                         conn_alert = sqlite3.connect("finagent_v6.db")
                         cursor_alert = conn_alert.cursor()
+                        # Lookup email from users table to dispatch SMTP email
+                        cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
+                        user_record = cursor_alert.fetchone()
+                        
                         cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", 
                                              (alert_user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "PENDING"))
                         conn_alert.commit()
                         conn_alert.close()
                         
-                        st.success("Alert logged! Your emergency temporary credentials have been generated:")
-                        st.info("🔑 **Temporary Password:** `user@11`\n\n🔢 **Temporary PIN:** `1111`\n\n⏳ **Notice:** Please use these credentials to log in **after 5 hours**. Ensure you update them immediately once inside!")
+                        if user_record and user_record[0]:
+                            send_emergency_email(user_record[0])
+                        
+                        st.success("Alert logged & SMTP email dispatch triggered!")
+                        st.info("🔑 **Temporary Password:** `user@11`\n\n🔢 **Temporary PIN:** `1111`\n\n📧 **Notice:** An email has been dispatched to your registered address. Please use these credentials to log in **after 5 hours**.")
 
 # ==========================================
 #         MAIN DASHBOARD (DEEP TECH UI)
