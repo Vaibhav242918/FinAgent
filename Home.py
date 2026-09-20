@@ -13,18 +13,19 @@ def make_hashes(password):
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
-# --- INITIALIZE MULTI-TENANT DATABASE (V3) ---
+# --- INITIALIZE MULTI-TENANT DATABASE (V4) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v3.db") # 👈 Upgraded to V3 for new user schema
+    conn = sqlite3.connect("finagent_v4.db") # 👈 Upgraded to V4 for Recovery PINs
     cursor = conn.cursor()
     
-    # Users Table (Now includes Email and Mobile)
+    # Users Table (Now includes Recovery PIN)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             email TEXT UNIQUE,
             mobile TEXT UNIQUE,
-            password TEXT
+            password TEXT,
+            recovery_pin TEXT
         )
     """)
     # Expenses Table 
@@ -42,7 +43,7 @@ def init_db():
 
 init_db()
 
-# 1. Page Configuration (Must be first)
+# 1. Page Configuration
 st.set_page_config(page_title="FinAgent - Executive AI", page_icon="🧠", layout="wide")
 
 # --- SESSION STATE MANAGEMENT ---
@@ -52,24 +53,19 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#         AUTHENTICATION GATEWAY (UNIQUE UI)
+#         AUTHENTICATION GATEWAY
 # ==========================================
 if not st.session_state['logged_in']:
-    # EXCLUSIVE LOGIN PAGE CSS
     st.markdown("""
         <style>
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
-        
-        /* 1. Hide the sidebar completely on the login page */
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        /* 2. Center the main titles */
         .auth-title {text-align: center; color: #00E5FF; font-size: 3rem; font-weight: 800; margin-bottom: 0px;}
         .auth-subtitle {text-align: center; color: #E2E8F0; font-size: 1.1rem; margin-bottom: 40px;}
         
-        /* 3. Style the login form as a Cyber-Security Card */
         div[data-testid="stForm"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
             border: 1px solid rgba(0, 229, 255, 0.3);
@@ -78,7 +74,6 @@ if not st.session_state['logged_in']:
             box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
         }
         
-        /* 4. Glowing Login Buttons */
         .stButton>button {
             border-radius: 6px;
             font-weight: bold;
@@ -96,28 +91,26 @@ if not st.session_state['logged_in']:
         </style>
         """, unsafe_allow_html=True)
     
-    # Render Centered Headers
     st.markdown("<h1 class='auth-title'>🧠 FinAgent Security</h1>", unsafe_allow_html=True)
     st.markdown("<p class='auth-subtitle'>Level 5 Telemetry Access Gateway</p>", unsafe_allow_html=True)
     
-    # Center the auth box tightly
     _, col_auth, _ = st.columns([1, 1.2, 1])
     
     with col_auth:
-        auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up"], horizontal=True)
+        # 👈 Added "Recover Access" to the toggle menu
+        auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
         
+        # --- LOGIN FLOW ---
         if auth_mode == "Sign In":
             with st.form("login_form"):
                 st.markdown("### 🔐 Operator Login")
-                # 👈 Updated to accept all three formats
                 login_identifier = st.text_input("Username / Email / Mobile Number")
                 login_pass = st.text_input("Password", type="password")
                 submit_login = st.form_submit_button("Initialize Session")
                 
                 if submit_login:
-                    conn = sqlite3.connect("finagent_v3.db")
+                    conn = sqlite3.connect("finagent_v4.db")
                     cursor = conn.cursor()
-                    # 👈 Advanced SQL: Check if the input matches username, email, OR mobile
                     cursor.execute('''
                         SELECT username, password FROM users 
                         WHERE username=? OR email=? OR mobile=?
@@ -125,14 +118,14 @@ if not st.session_state['logged_in']:
                     result = cursor.fetchone()
                     conn.close()
                     
-                    # result[1] is the password, result[0] is their core username
                     if result and check_hashes(login_pass, result[1]):
                         st.session_state['logged_in'] = True
-                        st.session_state['username'] = result[0] # Always set session to their base username
+                        st.session_state['username'] = result[0] 
                         st.rerun()
                     else:
                         st.error("Access Denied: Invalid credentials or account not found.")
 
+        # --- REGISTRATION FLOW ---
         elif auth_mode == "Sign Up":
             with st.form("register_form"):
                 st.markdown("### 📝 Request Clearance")
@@ -140,37 +133,66 @@ if not st.session_state['logged_in']:
                 new_email = st.text_input("Gmail / Email Address *")
                 new_mobile = st.text_input("Mobile Number *")
                 new_pass = st.text_input("New Password *", type="password")
+                new_pin = st.text_input("Set a 4-Digit Recovery PIN (Store this safely) *", max_chars=4, type="password")
                 submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
-                    if not new_user or not new_email or not new_mobile or not new_pass:
-                        st.error("All fields are required.")
+                    if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
+                        st.error("All fields are required. Ensure PIN is exactly 4 digits.")
                     else:
-                        conn = sqlite3.connect("finagent_v3.db")
+                        conn = sqlite3.connect("finagent_v4.db")
                         cursor = conn.cursor()
-                        # Check if any of these already exist to prevent duplicates
                         cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
                         if cursor.fetchone():
                             st.warning("Username, Email, or Mobile Number is already registered.")
                         else:
                             hashed_pass = make_hashes(new_pass)
-                            cursor.execute('INSERT INTO users (username, email, mobile, password) VALUES (?, ?, ?, ?)', 
-                                           (new_user, new_email, new_mobile, hashed_pass))
+                            cursor.execute('INSERT INTO users (username, email, mobile, password, recovery_pin) VALUES (?, ?, ?, ?, ?)', 
+                                           (new_user, new_email, new_mobile, hashed_pass, new_pin))
                             conn.commit()
                             st.success("Registration complete. Please switch to 'Sign In'.")
                         conn.close()
+        
+        # --- PASSWORD RECOVERY FLOW ---
+        elif auth_mode == "Recover Access":
+            with st.form("recovery_form"):
+                st.markdown("### 🔄 Reset Credentials")
+                st.info("Enter your identifying details and your 4-Digit Recovery PIN to create a new password.")
+                rec_identifier = st.text_input("Registered Username / Email / Mobile")
+                rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
+                rec_new_pass = st.text_input("Enter New Password", type="password")
+                submit_recovery = st.form_submit_button("Reset Password")
+                
+                if submit_recovery:
+                    conn = sqlite3.connect("finagent_v4.db")
+                    cursor = conn.cursor()
+                    
+                    # Verify user and PIN match
+                    cursor.execute('''
+                        SELECT username FROM users 
+                        WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
+                    ''', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                    result = cursor.fetchone()
+                    
+                    if result:
+                        hashed_new_pass = make_hashes(rec_new_pass)
+                        # Update the password where the username matches
+                        cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
+                        conn.commit()
+                        st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
+                    else:
+                        st.error("Verification failed. The account was not found or the PIN is incorrect.")
+                    conn.close()
 
 # ==========================================
 #         MAIN DASHBOARD (DEEP TECH UI)
 # ==========================================
 else:
-    # EXCLUSIVE DASHBOARD CSS
     st.markdown("""
         <style>
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
-        /* Subdued Dashboard Buttons */
         .stButton>button {
             border-radius: 6px;
             font-weight: bold;
@@ -187,7 +209,6 @@ else:
             box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
         }
         
-        /* Cyber-Glassmorphism Metrics */
         [data-testid="stMetric"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
             backdrop-filter: blur(12px);
@@ -210,7 +231,6 @@ else:
             
     st.divider()
 
-    # 2. Sidebar Controls
     with st.sidebar:
         st.header("⚙️ Global Parameters")
         st.session_state['monthly_income'] = st.number_input("Monthly Income (₹)", min_value=0, value=60000, step=1000)
@@ -226,7 +246,7 @@ else:
             submitted = st.form_submit_button("Inject Data", use_container_width=True)
             
             if submitted:
-                conn = sqlite3.connect("finagent_v3.db")
+                conn = sqlite3.connect("finagent_v4.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
                 cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', 
@@ -237,7 +257,7 @@ else:
                 st.rerun()
 
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
-            conn = sqlite3.connect("finagent_v3.db")
+            conn = sqlite3.connect("finagent_v4.db")
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM expenses WHERE username=? ORDER BY id DESC LIMIT 1", (st.session_state['username'],))
             last_exp = cursor.fetchone()
@@ -247,8 +267,7 @@ else:
             conn.close()
             st.rerun()
 
-    # 3. Data Fetching
-    conn = sqlite3.connect("finagent_v3.db")
+    conn = sqlite3.connect("finagent_v4.db")
     df_all = pd.read_sql_query("SELECT * FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
     conn.close()
 
@@ -256,7 +275,6 @@ else:
     current_savings = st.session_state['monthly_income'] - total_expenses
     goal_target = max(1, st.session_state['goal_target'])
 
-    # 4. Top KPI Row
     with st.container():
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -279,7 +297,6 @@ else:
             </div>
         """, unsafe_allow_html=True)
 
-    # --- Advanced Statistical Engine ---
     if not df_all.empty:
         with st.expander("🔬 Advanced Statistical Telemetry", expanded=False):
             unique_days = df_all['date'].nunique()
@@ -296,7 +313,6 @@ else:
 
     st.divider()
 
-    # 5. Visualizations
     col_chart1, col_chart2 = st.columns(2)
     deep_tech_colors = ['#00E5FF', '#8A2BE2', '#FF007F', '#F5A623', '#00FFAA'] 
 
@@ -329,7 +345,6 @@ else:
     else:
         st.info("Inject data to activate visualization algorithms.")
 
-    # 6. Smart Ledger
     st.divider()
     st.markdown("#### 📓 Encrypted Ledger")
     if not df_all.empty:
@@ -355,14 +370,14 @@ else:
         
         with tab_users:
             st.markdown("#### Registered Users Table")
-            conn_admin = sqlite3.connect("finagent_v3.db")
+            conn_admin = sqlite3.connect("finagent_v4.db")
             df_users = pd.read_sql_query("SELECT * FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
             
         with tab_data:
             st.markdown("#### Global Expenses (All Users)")
-            conn_admin = sqlite3.connect("finagent_v3.db")
+            conn_admin = sqlite3.connect("finagent_v4.db")
             df_global_expenses = pd.read_sql_query("SELECT * FROM expenses", conn_admin)
             conn_admin.close()
             st.dataframe(df_global_expenses, use_container_width=True)
@@ -371,11 +386,11 @@ else:
             st.markdown("#### Cloud Database Extraction")
             st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
             try:
-                with open("finagent_v3.db", "rb") as file:
+                with open("finagent_v4.db", "rb") as file:
                     st.download_button(
-                        label="⬇️ Download finagent_v3.db",
+                        label="⬇️ Download finagent_v4.db",
                         data=file,
-                        file_name=f"finagent_v3_backup_{datetime.now().strftime('%Y%m%d')}.db",
+                        file_name=f"finagent_v4_backup_{datetime.now().strftime('%Y%m%d')}.db",
                         mime="application/x-sqlite3",
                         use_container_width=True
                     )
