@@ -123,7 +123,7 @@ if prompt := st.chat_input("Ask me anything about your finances or budget advice
                 contents = [f"System Instruction: {system_instruction}\n\nUser Question: {prompt}"]
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=contents,
                 )
                 ai_response = response.text
