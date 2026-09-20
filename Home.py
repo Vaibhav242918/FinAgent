@@ -120,29 +120,21 @@ with st.container():
     with col3:
         st.metric(label="Available Liquidity", value=f"₹{current_savings:,.2f}", delta="Liquid", delta_color="normal")
     
-    # Deep Tech Gauge Chart
-    fig_gauge = go.Figure(go.Indicator(
-        mode = "gauge+number+delta",
-        value = current_savings,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': f"Goal: {st.session_state['goal_name']}", 'font': {'size': 18, 'color': '#00E5FF'}},
-        delta = {'reference': goal_target, 'position': "top"},
-        gauge = {
-            'axis': {'range': [None, goal_target], 'tickwidth': 1, 'tickcolor': "#111827"},
-            'bar': {'color': "#00E5FF"},
-            'bgcolor': "rgba(0,0,0,0)",
-            'borderwidth': 2,
-            'bordercolor': "#111827",
-            'steps': [
-                {'range': [0, goal_target*0.5], 'color': 'rgba(255, 0, 127, 0.1)'},
-                {'range': [goal_target*0.5, goal_target*0.8], 'color': 'rgba(138, 43, 226, 0.2)'},
-                {'range': [goal_target*0.8, goal_target], 'color': 'rgba(0, 229, 255, 0.2)'}],
-        }
-    ))
-    fig_gauge.update_layout(height=220, margin=dict(t=40, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", font={'color': "#E2E8F0"})
-    st.plotly_chart(fig_gauge, use_container_width=True)
+    # --- NEW: Cyber-Themed Glowing Progress Bar ---
+    progress_pct = min(100, max(0, int((current_savings / goal_target) * 100)))
+    st.markdown(f"""
+        <div style="padding: 20px 5px 5px 5px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #00E5FF; font-weight: bold; font-size: 16px;">Target Acquisition: {st.session_state['goal_name']}</span>
+                <span style="color: #E2E8F0; font-size: 14px; font-weight: bold;">₹{current_savings:,.0f} / ₹{goal_target:,.0f} ({progress_pct}%)</span>
+            </div>
+            <div style="background-color: #111827; border-radius: 8px; height: 16px; width: 100%; border: 1px solid rgba(0, 229, 255, 0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                <div style="background: linear-gradient(90deg, #8A2BE2, #00E5FF); width: {progress_pct}%; height: 100%; border-radius: 6px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.6); transition: width 0.5s ease-in-out;"></div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-# --- NEW: Advanced Statistical Engine ---
+# --- Advanced Statistical Engine ---
 if not df_all.empty:
     with st.expander("🔬 Advanced Statistical Telemetry", expanded=False):
         unique_days = df_all['date'].nunique()
@@ -167,7 +159,6 @@ if not df_all.empty:
     with col_chart1:
         st.markdown("#### 📡 Capital Distribution")
         df_cat = df_all.groupby('category', as_index=False)['amount'].sum()
-        # FIXED: values="amount" instead of values="Amount"
         fig = px.pie(df_cat, values="amount", names="category", hole=0.65, color_discrete_sequence=deep_tech_colors)
         fig.update_traces(
             textposition='inside', textinfo='percent+label',
