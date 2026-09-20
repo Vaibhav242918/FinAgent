@@ -167,7 +167,8 @@ if not df_all.empty:
     with col_chart1:
         st.markdown("#### 📡 Capital Distribution")
         df_cat = df_all.groupby('category', as_index=False)['amount'].sum()
-        fig = px.pie(df_cat, values="Amount", names="category", hole=0.65, color_discrete_sequence=deep_tech_colors)
+        # FIXED: values="amount" instead of values="Amount"
+        fig = px.pie(df_cat, values="amount", names="category", hole=0.65, color_discrete_sequence=deep_tech_colors)
         fig.update_traces(
             textposition='inside', textinfo='percent+label',
             marker=dict(line=dict(color='#070A15', width=4)), hoverinfo="label+percent+value"
