@@ -15,10 +15,9 @@ def check_hashes(password, hashed_text):
 
 # --- INITIALIZE MULTI-TENANT DATABASE (V4) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v4.db") # 👈 Upgraded to V4 for Recovery PINs
+    conn = sqlite3.connect("finagent_v4.db") 
     cursor = conn.cursor()
     
-    # Users Table (Now includes Recovery PIN)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -28,7 +27,6 @@ def init_db():
             recovery_pin TEXT
         )
     """)
-    # Expenses Table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,10 +95,8 @@ if not st.session_state['logged_in']:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     
     with col_auth:
-        # 👈 Added "Recover Access" to the toggle menu
         auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
         
-        # --- LOGIN FLOW ---
         if auth_mode == "Sign In":
             with st.form("login_form"):
                 st.markdown("### 🔐 Operator Login")
@@ -125,7 +121,6 @@ if not st.session_state['logged_in']:
                     else:
                         st.error("Access Denied: Invalid credentials or account not found.")
 
-        # --- REGISTRATION FLOW ---
         elif auth_mode == "Sign Up":
             with st.form("register_form"):
                 st.markdown("### 📝 Request Clearance")
@@ -153,7 +148,6 @@ if not st.session_state['logged_in']:
                             st.success("Registration complete. Please switch to 'Sign In'.")
                         conn.close()
         
-        # --- PASSWORD RECOVERY FLOW ---
         elif auth_mode == "Recover Access":
             with st.form("recovery_form"):
                 st.markdown("### 🔄 Reset Credentials")
@@ -166,8 +160,6 @@ if not st.session_state['logged_in']:
                 if submit_recovery:
                     conn = sqlite3.connect("finagent_v4.db")
                     cursor = conn.cursor()
-                    
-                    # Verify user and PIN match
                     cursor.execute('''
                         SELECT username FROM users 
                         WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
@@ -176,7 +168,6 @@ if not st.session_state['logged_in']:
                     
                     if result:
                         hashed_new_pass = make_hashes(rec_new_pass)
-                        # Update the password where the username matches
                         cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
                         conn.commit()
                         st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
@@ -232,6 +223,40 @@ else:
     st.divider()
 
     with st.sidebar:
+        # --- NEW: Account Settings Portal ---
+        with st.expander("👤 Account Settings", expanded=False):
+            st.markdown("Update your registered contact details.")
+            
+            # Fetch current details
+            conn_prof = sqlite3.connect("finagent_v4.db")
+            cursor_prof = conn_prof.cursor()
+            cursor_prof.execute("SELECT email, mobile FROM users WHERE username=?", (st.session_state['username'],))
+            user_info = cursor_prof.fetchone()
+            conn_prof.close()
+            
+            current_email = user_info[0] if user_info and user_info[0] else ""
+            current_mobile = user_info[1] if user_info and user_info[1] else ""
+            
+            with st.form("update_profile_form"):
+                upd_email = st.text_input("Email Address", value=current_email)
+                upd_mobile = st.text_input("Mobile Number", value=current_mobile)
+                submit_update = st.form_submit_button("Update Profile", use_container_width=True)
+                
+                if submit_update:
+                    if not upd_email or not upd_mobile:
+                        st.error("Fields cannot be empty.")
+                    else:
+                        try:
+                            conn_prof = sqlite3.connect("finagent_v4.db")
+                            cursor_prof = conn_prof.cursor()
+                            cursor_prof.execute("UPDATE users SET email=?, mobile=? WHERE username=?", (upd_email, upd_mobile, st.session_state['username']))
+                            conn_prof.commit()
+                            conn_prof.close()
+                            st.success("Profile successfully updated!")
+                        except sqlite3.IntegrityError:
+                            st.error("That Email or Mobile is already registered to another user.")
+
+        st.divider()
         st.header("⚙️ Global Parameters")
         st.session_state['monthly_income'] = st.number_input("Monthly Income (₹)", min_value=0, value=60000, step=1000)
         st.session_state['goal_name'] = st.text_input("Active Goal Name", value="MacBook Air")
