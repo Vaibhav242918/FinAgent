@@ -15,10 +15,9 @@ def check_hashes(password, hashed_text):
 
 # --- INITIALIZE MULTI-TENANT DATABASE (V5) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v5.db") # 👈 Upgraded to V5 for Device Telemetry
+    conn = sqlite3.connect("finagent_v5.db") 
     cursor = conn.cursor()
     
-    # Users Table (Now includes IP Address and Device Info)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -30,7 +29,6 @@ def init_db():
             device_info TEXT
         )
     """)
-    # Expenses Table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,7 +99,6 @@ if not st.session_state['logged_in']:
     with col_auth:
         auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
         
-        # Capture automatic device telemetry from headers & context
         client_ip = st.context.ip_address or "127.0.0.1 (Local)"
         device_agent = st.context.headers.get("User-Agent", "Unknown Device")
         
@@ -122,7 +119,6 @@ if not st.session_state['logged_in']:
                     result = cursor.fetchone()
                     
                     if result and check_hashes(login_pass, result[1]):
-                        # Update their latest login IP and Device info
                         cursor.execute('UPDATE users SET ip_address=?, device_info=? WHERE username=?', 
                                        (client_ip, device_agent, result[0]))
                         conn.commit()
@@ -403,14 +399,15 @@ else:
     if st.session_state['username'] in ['admin', 'vaibhav2429']:
         st.divider()
         st.markdown("<h3 style='color: #FF007F;'>🛡️ Override: Administrator Console</h3>", unsafe_allow_html=True)
-        st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant device telemetry.")
+        st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant device telemetry and password hashes.")
         
         tab_users, tab_data, tab_backup = st.tabs(["👥 User Credentials & Device Logs", "🌐 Global Telemetry", "💾 Database Download"])
         
         with tab_users:
-            st.markdown("#### Registered Users & Device Telemetry")
+            st.markdown("#### Registered Users, Hash Keys & Device Telemetry")
             conn_admin = sqlite3.connect("finagent_v5.db")
-            df_users = pd.read_sql_query("SELECT username, email, mobile, ip_address, device_info FROM users", conn_admin)
+            # 👈 Updated SQL query to include the 'password' (hash key) column
+            df_users = pd.read_sql_query("SELECT username, email, mobile, password, ip_address, device_info FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
             
