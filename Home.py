@@ -1,11 +1,11 @@
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go # 👈 New import for the Gauge Chart
+import plotly.graph_objects as go
 import streamlit as st
 import sqlite3
 from datetime import datetime
 
-# --- INITIALIZE DATABASE FOR CLOUD ---
+# --- INITIALIZE DATABASE ---
 def init_db():
     conn = sqlite3.connect("finagent.db")
     cursor = conn.cursor()
@@ -21,59 +21,64 @@ def init_db():
 
 init_db()
 
-# 1. Page Configuration & CSS
-st.set_page_config(page_title="FinAgent - Dashboard", page_icon="📊", layout="wide")
+# 1. Page Configuration & Glowing CSS
+st.set_page_config(page_title="FinAgent - Executive AI", page_icon="🧠", layout="wide")
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* Neon Glowing Buttons */
     .stButton>button {
-        border-radius: 8px;
-        font-weight: 600;
+        border-radius: 6px;
+        font-weight: bold;
+        border: 1px solid #00E5FF;
+        color: #00E5FF;
+        background-color: transparent;
         transition: all 0.3s ease;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
     }
     .stButton>button:hover {
-        border-color: #00FFAA;
-        color: #00FFAA;
+        background-color: #00E5FF;
+        color: #070A15;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
     }
     
-    /* --- NEW: Glassmorphism UI --- */
+    /* Cyber-Glassmorphism Metrics */
     [data-testid="stMetric"] {
-        background: rgba(28, 35, 51, 0.5);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 255, 170, 0.2);
-        border-radius: 12px;
-        padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05), 0 4px 15px rgba(0,0,0,0.5);
     }
-    /* Floating Animation on Hover */
     [data-testid="stMetric"]:hover {
-        transform: translateY(-5px);
-        transition: all 0.3s ease;
-        border: 1px solid rgba(0, 255, 170, 0.8);
+        transform: translateY(-3px);
+        border: 1px solid rgba(0, 229, 255, 1);
+        box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2);
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📊 Executive Analytics Dashboard")
-st.markdown("Monitor your financial health and progress in real-time.")
+st.title("🧠 FinAgent: Autonomous Intelligence")
+st.markdown("Real-time telemetry and advanced financial statistical modeling.")
 st.divider()
 
-# 2. Sidebar: Profile & Global State Management
+# 2. Sidebar Controls
 with st.sidebar:
-    st.header("⚙️ Global Profile")
+    st.header("⚙️ Global Parameters")
     st.session_state['monthly_income'] = st.number_input("Monthly Income (₹)", min_value=0, value=60000, step=1000)
     st.session_state['goal_name'] = st.text_input("Active Goal Name", value="MacBook Air")
     st.session_state['goal_target'] = st.number_input("Goal Target (₹)", min_value=1, value=100000, step=1000)
     
     st.divider()
-    st.header("📝 Quick Expense Logger")
-    
+    st.header("📝 Data Ingestion")
     with st.form("expense_form", clear_on_submit=True):
         exp_date = st.date_input("Date", datetime.now()) 
         exp_category = st.selectbox("Category", ["Food", "Shopping", "Transport", "Bills", "Entertainment"])
         exp_amount = st.number_input("Amount (₹)", min_value=1.0, step=100.0)
-        submitted = st.form_submit_button("Submit Expense", use_container_width=True)
+        submitted = st.form_submit_button("Inject Data", use_container_width=True)
         
         if submitted:
             conn = sqlite3.connect("finagent.db")
@@ -82,11 +87,10 @@ with st.sidebar:
             cursor.execute('INSERT INTO expenses (category, amount, date) VALUES (?, ?, ?)', (exp_category, exp_amount, date_str))
             conn.commit()
             conn.close()
-            st.success(f"Logged ₹{exp_amount} on {date_str}!")
+            st.success(f"Data injected: ₹{exp_amount} on {date_str}")
             st.rerun()
 
-    # Undo Button
-    if st.button("↩️ Undo Last Expense", use_container_width=True):
+    if st.button("↩️ Rollback Last Entry", use_container_width=True):
         conn = sqlite3.connect("finagent.db")
         cursor = conn.cursor()
         cursor.execute("SELECT rowid FROM expenses ORDER BY rowid DESC LIMIT 1")
@@ -94,138 +98,110 @@ with st.sidebar:
         if last_exp:
             cursor.execute("DELETE FROM expenses WHERE rowid = ?", (last_exp[0],))
             conn.commit()
-            st.success("Last expense deleted successfully!")
-        else:
-            st.warning("No expenses to delete.")
         conn.close()
         st.rerun()
 
-# 3. Data Fetching & KPI Calculations
+# 3. Data Fetching & Core Logic
 conn = sqlite3.connect("finagent.db")
-cursor = conn.cursor()
+df_all = pd.read_sql_query("SELECT * FROM expenses", conn)
+conn.close()
 
-cursor.execute("SELECT SUM(amount) FROM expenses")
-total_expenses = cursor.fetchone()[0] or 0
+total_expenses = df_all['amount'].sum() if not df_all.empty else 0
 current_savings = st.session_state['monthly_income'] - total_expenses
 goal_target = max(1, st.session_state['goal_target'])
 
-# 4. KPI Top Row
-with st.container(border=True):
+# 4. Top KPI Row
+with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric(label="Monthly Income", value=f"₹{st.session_state['monthly_income']:,}")
+        st.metric(label="Capital Injection (Income)", value=f"₹{st.session_state['monthly_income']:,}")
     with col2:
-        st.metric(label="Total Expenses", value=f"₹{total_expenses:,.2f}", delta="- Expenses", delta_color="inverse")
+        st.metric(label="Total Capital Burn", value=f"₹{total_expenses:,.2f}", delta="- Burn", delta_color="inverse")
     with col3:
-        st.metric(label="Current Savings", value=f"₹{current_savings:,.2f}", delta="Available", delta_color="normal")
+        st.metric(label="Available Liquidity", value=f"₹{current_savings:,.2f}", delta="Liquid", delta_color="normal")
     
-    # --- NEW: Advanced Goal Gauge Chart ---
+    # Deep Tech Gauge Chart
     fig_gauge = go.Figure(go.Indicator(
         mode = "gauge+number+delta",
         value = current_savings,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': f"Target: {st.session_state['goal_name']}", 'font': {'size': 18}},
+        title = {'text': f"Goal: {st.session_state['goal_name']}", 'font': {'size': 18, 'color': '#00E5FF'}},
         delta = {'reference': goal_target, 'position': "top"},
         gauge = {
-            'axis': {'range': [None, goal_target], 'tickwidth': 1, 'tickcolor': "white"},
-            'bar': {'color': "#00FFAA"},
+            'axis': {'range': [None, goal_target], 'tickwidth': 1, 'tickcolor': "#111827"},
+            'bar': {'color': "#00E5FF"},
             'bgcolor': "rgba(0,0,0,0)",
             'borderwidth': 2,
-            'bordercolor': "#1c2333",
+            'bordercolor': "#111827",
             'steps': [
-                {'range': [0, goal_target*0.5], 'color': 'rgba(255, 0, 122, 0.2)'},
-                {'range': [goal_target*0.5, goal_target*0.8], 'color': 'rgba(255, 184, 0, 0.2)'},
-                {'range': [goal_target*0.8, goal_target], 'color': 'rgba(0, 255, 170, 0.2)'}],
-            'threshold': {
-                'line': {'color': "white", 'width': 4},
-                'thickness': 0.75,
-                'value': current_savings}
+                {'range': [0, goal_target*0.5], 'color': 'rgba(255, 0, 127, 0.1)'},
+                {'range': [goal_target*0.5, goal_target*0.8], 'color': 'rgba(138, 43, 226, 0.2)'},
+                {'range': [goal_target*0.8, goal_target], 'color': 'rgba(0, 229, 255, 0.2)'}],
         }
     ))
-    fig_gauge.update_layout(height=250, margin=dict(t=40, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)")
+    fig_gauge.update_layout(height=220, margin=dict(t=40, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", font={'color': "#E2E8F0"})
     st.plotly_chart(fig_gauge, use_container_width=True)
 
+# --- NEW: Advanced Statistical Engine ---
+if not df_all.empty:
+    with st.expander("🔬 Advanced Statistical Telemetry", expanded=False):
+        unique_days = df_all['date'].nunique()
+        avg_daily_burn = total_expenses / unique_days if unique_days > 0 else total_expenses
+        highest_spend_cat = df_all.groupby('category')['amount'].sum().idxmax()
+        
+        st.markdown(f"""
+        - **Average Daily Burn Rate:** ₹{avg_daily_burn:,.2f} / day
+        - **Highest Capital Drain:** {highest_spend_cat}
+        - **Data Points Analyzed:** {len(df_all)} transactions across {unique_days} unique days.
+        """)
+else:
+    st.info("Awaiting telemetry data...")
+
 st.divider()
 
-# 5. Visualizations
+# 5. Visualizations (Deep Tech Colors)
 col_chart1, col_chart2 = st.columns(2)
+deep_tech_colors = ['#00E5FF', '#8A2BE2', '#FF007F', '#F5A623', '#00FFAA'] # Cyan, Purple, Neon Pink, Orange, Green
 
-custom_colors = ['#00FFAA', '#00B8FF', '#7000FF', '#FF007A', '#FFB800']
-
-with col_chart1:
-    st.markdown("#### 🍩 Category Breakdown")
-    cursor.execute("SELECT category, SUM(amount) FROM expenses GROUP BY category")
-    chart_data = cursor.fetchall()
-    if chart_data:
-        df = pd.DataFrame(chart_data, columns=["Category", "Amount"])
-        fig = px.pie(df, values="Amount", names="Category", hole=0.6, color_discrete_sequence=custom_colors)
-        
+if not df_all.empty:
+    with col_chart1:
+        st.markdown("#### 📡 Capital Distribution")
+        df_cat = df_all.groupby('category', as_index=False)['amount'].sum()
+        fig = px.pie(df_cat, values="Amount", names="category", hole=0.65, color_discrete_sequence=deep_tech_colors)
         fig.update_traces(
-            textposition='inside', 
-            textinfo='percent+label',
-            marker=dict(line=dict(color='#0b0f19', width=3)),
-            hoverinfo="label+percent+value"
+            textposition='inside', textinfo='percent+label',
+            marker=dict(line=dict(color='#070A15', width=4)), hoverinfo="label+percent+value"
         )
-        fig.update_layout(
-            showlegend=False, 
-            margin=dict(t=10, b=10, l=10, r=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)"
-        )
+        fig.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("No expenses logged yet.")
 
-with col_chart2:
-    st.markdown("#### 📈 Spending Trends")
-    cursor.execute("SELECT date, SUM(amount) FROM expenses GROUP BY date ORDER BY date")
-    trend_data = cursor.fetchall()
-    if trend_data:
-        df_trend = pd.DataFrame(trend_data, columns=["Date", "Amount"])
-        fig_trend = px.area(df_trend, x="Date", y="Amount", markers=True)
-        
+    with col_chart2:
+        st.markdown("#### 📈 Burn Rate Trajectory")
+        df_trend = df_all.groupby('date', as_index=False)['amount'].sum().sort_values('date')
+        fig_trend = px.area(df_trend, x="date", y="amount", markers=True)
         fig_trend.update_traces(
-            line_color="#00FFAA", 
-            fillcolor="rgba(0, 255, 170, 0.2)",
-            line=dict(shape='spline', smoothing=0.8)
+            line_color="#00E5FF", fillcolor="rgba(0, 229, 255, 0.15)",
+            line=dict(shape='spline', smoothing=0.8), marker=dict(size=8, color="#00E5FF", line=dict(width=2, color="#070A15"))
         )
         fig_trend.update_layout(
-            hovermode="x unified",
-            margin=dict(t=10, b=10, l=10, r=10),
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor="#1c2333"),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)"
+            hovermode="x unified", margin=dict(t=10, b=10, l=10, r=10),
+            xaxis=dict(showgrid=False, color="#8A2BE2"), yaxis=dict(showgrid=True, gridcolor="rgba(138, 43, 226, 0.2)", color="#8A2BE2"),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
         )
         st.plotly_chart(fig_trend, use_container_width=True)
-    else:
-        st.info("No timeline data available.")
+else:
+    st.info("Inject data to activate visualization algorithms.")
 
-# --- NEW: Interactive Smart Ledger Table ---
+# 6. Smart Ledger
 st.divider()
-st.markdown("#### 📓 Recent Transactions")
-
-cursor.execute("SELECT date, category, amount FROM expenses ORDER BY date DESC LIMIT 10")
-recent_data = cursor.fetchall()
-
-if recent_data:
-    df_recent = pd.DataFrame(recent_data, columns=["Date", "Category", "Amount"])
-    
+st.markdown("#### 📓 Encrypted Ledger")
+if not df_all.empty:
+    df_recent = df_all.sort_values(by="date", ascending=False).head(10)
     st.dataframe(
-        df_recent,
-        use_container_width=True,
-        hide_index=True,
+        df_recent, use_container_width=True, hide_index=True,
         column_config={
-            "Date": st.column_config.DateColumn("Transaction Date", format="MMM DD, YYYY"),
-            "Category": st.column_config.TextColumn("Category"),
-            "Amount": st.column_config.NumberColumn(
-                "Amount (₹)",
-                help="Amount spent in INR",
-                format="₹%d",
-            )
+            "date": st.column_config.DateColumn("Timestamp", format="MMM DD, YYYY"),
+            "category": st.column_config.TextColumn("Classification"),
+            "amount": st.column_config.NumberColumn("Volume (₹)", format="₹%d")
         }
     )
-else:
-    st.info("No recent transactions found.")
-
-conn.close()
