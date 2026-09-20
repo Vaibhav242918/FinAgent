@@ -99,7 +99,6 @@ if not st.session_state['logged_in']:
         </style>
         """, unsafe_allow_html=True)
     
-    # 👈 Replaced brain icon with a professional security shield and refined typography
     st.markdown("<h1 class='auth-title'>🛡️ FinAgent Enterprise Security</h1>", unsafe_allow_html=True)
     st.markdown("<p class='auth-subtitle'>Multi-Tenant Zero-Trust Telemetry Gateway</p>", unsafe_allow_html=True)
     
@@ -484,7 +483,7 @@ else:
             st.markdown("#### 🗑️ Resolve / Delete Support Request")
             with st.form("delete_alert_form", clear_on_submit=True):
                 alert_row_to_delete = st.number_input("Enter Row Number to Delete (e.g., 1, 2...)", min_value=1, step=1)
-                submit_delete_alert = st.form_submit_button("Delete Request")
+                submit_delete_alert = st.form_submit_button("Resolve & Delete Request")
                 
                 if submit_delete_alert:
                     conn_del = sqlite3.connect("finagent_v6.db")
@@ -494,9 +493,10 @@ else:
                     
                     if all_rows and len(all_rows) >= alert_row_to_delete:
                         target_db_id = all_rows[alert_row_to_delete - 1][0]
+                        # Optional update to COMPLETED before clearing or delete right away
                         cursor_del.execute("DELETE FROM support_alerts WHERE id=?", (target_db_id,))
                         conn_del.commit()
-                        st.success(f"Support request at row {alert_row_to_delete} has been cleared, and IDs have re-indexed!")
+                        st.success(f"Support request at row {alert_row_to_delete} has been resolved, cleared, and IDs re-indexed!")
                     else:
                         st.error("Invalid row number selected.")
                     conn_del.close()
