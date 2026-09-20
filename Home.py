@@ -52,7 +52,7 @@ def init_db():
 init_db()
 
 # 1. Page Configuration
-st.set_page_config(page_title="FinAgent - Executive AI", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="FinAgent - Executive AI", page_icon="🛡️", layout="wide")
 
 # --- SESSION STATE MANAGEMENT ---
 if 'logged_in' not in st.session_state:
@@ -71,8 +71,8 @@ if not st.session_state['logged_in']:
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        .auth-title {text-align: center; color: #00E5FF; font-size: 3rem; font-weight: 800; margin-bottom: 0px;}
-        .auth-subtitle {text-align: center; color: #E2E8F0; font-size: 1.1rem; margin-bottom: 40px;}
+        .auth-title {text-align: center; color: #00E5FF; font-size: 2.8rem; font-weight: 800; margin-bottom: 0px; letter-spacing: -1px;}
+        .auth-subtitle {text-align: center; color: #94A3B8; font-size: 1rem; margin-bottom: 35px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;}
         
         div[data-testid="stForm"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
@@ -99,8 +99,9 @@ if not st.session_state['logged_in']:
         </style>
         """, unsafe_allow_html=True)
     
-    st.markdown("<h1 class='auth-title'>🧠 FinAgent Security</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='auth-subtitle'>Level 5 Telemetry Access Gateway</p>", unsafe_allow_html=True)
+    # 👈 Replaced brain icon with a professional security shield and refined typography
+    st.markdown("<h1 class='auth-title'>🛡️ FinAgent Enterprise Security</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='auth-subtitle'>Multi-Tenant Zero-Trust Telemetry Gateway</p>", unsafe_allow_html=True)
     
     _, col_auth, _ = st.columns([1, 1.2, 1])
     
@@ -473,7 +474,6 @@ else:
             df_alerts = pd.read_sql_query("SELECT * FROM support_alerts ORDER BY id ASC", conn_admin)
             conn_admin.close()
             
-            # 👈 AUTO-REINDEX: Dynamically overwrite DataFrame IDs to sequence 1, 2, 3... starting from top
             if not df_alerts.empty:
                 df_alerts['id'] = range(1, len(df_alerts) + 1)
                 st.dataframe(df_alerts, use_container_width=True, hide_index=True)
@@ -483,19 +483,16 @@ else:
             st.markdown("---")
             st.markdown("#### 🗑️ Resolve / Delete Support Request")
             with st.form("delete_alert_form", clear_on_submit=True):
-                # Let admin pick from existing rows or type row position
                 alert_row_to_delete = st.number_input("Enter Row Number to Delete (e.g., 1, 2...)", min_value=1, step=1)
                 submit_delete_alert = st.form_submit_button("Delete Request")
                 
                 if submit_delete_alert:
                     conn_del = sqlite3.connect("finagent_v6.db")
                     cursor_del = conn_del.cursor()
-                    # Fetch all rows ordered by ID
                     cursor_del.execute("SELECT id FROM support_alerts ORDER BY id ASC")
                     all_rows = cursor_del.fetchall()
                     
                     if all_rows and len(all_rows) >= alert_row_to_delete:
-                        # Get the true underlying database ID of the selected row number
                         target_db_id = all_rows[alert_row_to_delete - 1][0]
                         cursor_del.execute("DELETE FROM support_alerts WHERE id=?", (target_db_id,))
                         conn_del.commit()
