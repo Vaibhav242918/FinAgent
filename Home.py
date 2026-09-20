@@ -4,59 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 import sqlite3
 import hashlib
-import re
 from datetime import datetime
-
-# --- INITIALIZE MULTI-TENANT DATABASE (V7) WITH AUTO-ADMIN SEEDING ---
-def init_db():
-    conn = sqlite3.connect("finagent_v7.db") 
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            email TEXT UNIQUE,
-            mobile TEXT UNIQUE,
-            password TEXT,
-            recovery_pin TEXT,
-            ip_address TEXT,
-            device_info TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            category TEXT,
-            amount REAL,
-            date TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS support_alerts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            identifier TEXT,
-            timestamp TEXT,
-            status TEXT
-        )
-    """)
-    
-    # 👈 Auto-seed Admin Account so you never get locked out
-    admin_user = "vaibhav2429"
-    admin_email = "admin@finagent.com"
-    admin_mobile = "9999999999"
-    admin_pass = make_hashes("Admin@123") # Default complex password matching validation rules
-    admin_pin = "2429"
-    
-    cursor.execute("""
-        INSERT OR IGNORE INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (admin_user, admin_email, admin_mobile, admin_pass, admin_pin, "127.0.0.1", "Admin-Terminal"))
-    
-    conn.commit()
-    conn.close()
-
-init_db()
 
 # --- SECURITY: Password Hashing ---
 def make_hashes(password):
@@ -65,21 +13,9 @@ def make_hashes(password):
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
-# --- PASSWORD COMPLEXITY VALIDATION ---
-def validate_password_complexity(password):
-    if len(password) < 6:
-        return "Password must be at least 6 characters long."
-    if not re.search(r"[A-Z]", password):
-        return "Password must contain at least one capital letter (A-Z)."
-    if not re.search(r"[a-z]", password):
-        return "Password must contain at least one small letter (a-z)."
-    if not re.search(r"[0-9]", password):
-        return "Password must contain at least one number (0-9)."
-    return None
-
-# --- INITIALIZE MULTI-TENANT DATABASE (V7) ---
+# --- INITIALIZE MULTI-TENANT DATABASE (V6) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v7.db") 
+    conn = sqlite3.connect("finagent_v6.db") # 👈 Upgraded to V6 for Support Alerts table
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -102,6 +38,7 @@ def init_db():
             date TEXT
         )
     """)
+    # 👈 New table to log user lockout alerts for the admin
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS support_alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -182,7 +119,7 @@ if not st.session_state['logged_in']:
                 submit_login = st.form_submit_button("Initialize Session")
                 
                 if submit_login:
-                    conn = sqlite3.connect("finagent_v7.db")
+                    conn = sqlite3.connect("finagent_v6.db")
                     cursor = conn.cursor()
                     cursor.execute('''
                         SELECT username, password FROM users 
@@ -206,7 +143,6 @@ if not st.session_state['logged_in']:
         elif auth_mode == "Sign Up":
             with st.form("register_form", clear_on_submit=True):
                 st.markdown("### 📝 Request Clearance")
-                st.caption("Password must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number.")
                 new_user = st.text_input("New Username *")
                 new_email = st.text_input("Gmail / Email Address *")
                 new_mobile = st.text_input("Mobile Number *")
@@ -215,13 +151,10 @@ if not st.session_state['logged_in']:
                 submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
-                    pwd_error = validate_password_complexity(new_pass)
                     if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
                         st.error("All fields are required. Ensure PIN is exactly 4 digits.")
-                    elif pwd_error:
-                        st.error(pwd_error)
                     else:
-                        conn = sqlite3.connect("finagent_v7.db")
+                        conn = sqlite3.connect("finagent_v6.db")
                         cursor = conn.cursor()
                         cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
                         if cursor.fetchone():
@@ -239,34 +172,31 @@ if not st.session_state['logged_in']:
         elif auth_mode == "Recover Access":
             with st.form("recovery_form", clear_on_submit=True):
                 st.markdown("### 🔄 Reset Credentials")
-                st.info("Enter your identifying details, your 4-Digit PIN, and a new complex password.")
+                st.info("Enter your identifying details and your 4-Digit Recovery PIN to create a new password.")
                 rec_identifier = st.text_input("Registered Username / Email / Mobile")
                 rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
                 rec_new_pass = st.text_input("Enter New Password", type="password")
                 submit_recovery = st.form_submit_button("Reset Password")
                 
                 if submit_recovery:
-                    pwd_error = validate_password_complexity(rec_new_pass)
-                    if pwd_error:
-                        st.error(pwd_error)
+                    conn = sqlite3.connect("finagent_v6.db")
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        SELECT username FROM users 
+                        WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
+                    ''', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                    result = cursor.fetchone()
+                    
+                    if result:
+                        hashed_new_pass = make_hashes(rec_new_pass)
+                        cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
+                        conn.commit()
+                        st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
                     else:
-                        conn = sqlite3.connect("finagent_v7.db")
-                        cursor = conn.cursor()
-                        cursor.execute('''
-                            SELECT username FROM users 
-                            WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
-                        ''', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
-                        result = cursor.fetchone()
-                        
-                        if result:
-                            hashed_new_pass = make_hashes(rec_new_pass)
-                            cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
-                            conn.commit()
-                            st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
-                        else:
-                            st.error("Verification failed. Account not found or incorrect PIN.")
-                        conn.close()
+                        st.error("Verification failed. Account not found or incorrect PIN.")
+                    conn.close()
             
+            # 👈 Interactive Lockout Alert Form (Replaces static text so button is fully clickable)
             with st.form("lockout_alert_form", clear_on_submit=True):
                 st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both password and PIN?</p>", unsafe_allow_html=True)
                 st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your username or email below to instantly alert admin (vaibhav2429) for a manual override.</p>", unsafe_allow_html=True)
@@ -278,7 +208,7 @@ if not st.session_state['logged_in']:
                     if not alert_user:
                         st.error("Please enter your identifying details.")
                     else:
-                        conn_alert = sqlite3.connect("finagent_v7.db")
+                        conn_alert = sqlite3.connect("finagent_v6.db")
                         cursor_alert = conn_alert.cursor()
                         cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", 
                                              (alert_user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "PENDING"))
@@ -337,7 +267,7 @@ else:
         with st.expander("👤 Account Settings", expanded=False):
             st.markdown("Update your registered contact details.")
             
-            conn_prof = sqlite3.connect("finagent_v7.db")
+            conn_prof = sqlite3.connect("finagent_v6.db")
             cursor_prof = conn_prof.cursor()
             cursor_prof.execute("SELECT email, mobile FROM users WHERE username=?", (st.session_state['username'],))
             user_info = cursor_prof.fetchone()
@@ -356,7 +286,7 @@ else:
                         st.error("Fields cannot be empty.")
                     else:
                         try:
-                            conn_prof = sqlite3.connect("finagent_v7.db")
+                            conn_prof = sqlite3.connect("finagent_v6.db")
                             cursor_prof = conn_prof.cursor()
                             cursor_prof.execute("UPDATE users SET email=?, mobile=? WHERE username=?", (upd_email, upd_mobile, st.session_state['username']))
                             conn_prof.commit()
@@ -380,7 +310,7 @@ else:
             submitted = st.form_submit_button("Inject Data", use_container_width=True)
             
             if submitted:
-                conn = sqlite3.connect("finagent_v7.db")
+                conn = sqlite3.connect("finagent_v6.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
                 cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', 
@@ -391,7 +321,7 @@ else:
                 st.rerun()
 
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
-            conn = sqlite3.connect("finagent_v7.db")
+            conn = sqlite3.connect("finagent_v6.db")
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM expenses WHERE username=? ORDER BY id DESC LIMIT 1", (st.session_state['username'],))
             last_exp = cursor.fetchone()
@@ -401,7 +331,7 @@ else:
             conn.close()
             st.rerun()
 
-    conn = sqlite3.connect("finagent_v7.db")
+    conn = sqlite3.connect("finagent_v6.db")
     df_all = pd.read_sql_query("SELECT * FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
     conn.close()
 
@@ -500,11 +430,12 @@ else:
         st.markdown("<h3 style='color: #FF007F;'>🛡️ Override: Administrator Console</h3>", unsafe_allow_html=True)
         st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant device telemetry and password hashes.")
         
+        # 👈 Added "🚨 Support Alerts" tab so admin can see who is locked out
         tab_users, tab_alerts, tab_data, tab_backup = st.tabs(["👥 User Credentials", "🚨 Support Alerts", "🌐 Global Telemetry", "💾 Database Download"])
         
         with tab_users:
             st.markdown("#### Registered Users, Hash Keys & Device Telemetry")
-            conn_admin = sqlite3.connect("finagent_v7.db")
+            conn_admin = sqlite3.connect("finagent_v6.db")
             df_users = pd.read_sql_query("SELECT username, email, mobile, password, ip_address, device_info FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
@@ -518,14 +449,11 @@ else:
                 submit_admin_reset = st.form_submit_button("Force Reset User Credentials")
                 
                 if submit_admin_reset:
-                    pwd_error = validate_password_complexity(new_temp_pass)
                     if not target_user or not new_temp_pass or len(new_temp_pin) != 4:
                         st.error("Provide a username, new password, and a valid 4-digit PIN.")
-                    elif pwd_error:
-                        st.error(f"Admin override error: {pwd_error}")
                     else:
-                        conn_admin = sqlite3.connect("finagent_v7.db")
-                        cursor_admin = conn_admin.conn.cursor() if hasattr(sqlite3.connect("finagent_v7.db"), 'conn') else conn_admin.cursor() # safe fallback
+                        conn_admin = sqlite3.connect("finagent_v6.db")
+                        cursor_admin = conn_admin.cursor()
                         cursor_admin.execute("SELECT username FROM users WHERE username=?", (target_user,))
                         if cursor_admin.fetchone():
                             hashed_pw = make_hashes(new_temp_pass)
@@ -541,14 +469,14 @@ else:
         with tab_alerts:
             st.markdown("#### 🚨 Incoming User Lockout & Support Alerts")
             st.info("When users forget both their password and recovery PIN, their alert requests appear here.")
-            conn_admin = sqlite3.connect("finagent_v7.db")
+            conn_admin = sqlite3.connect("finagent_v6.db")
             df_alerts = pd.read_sql_query("SELECT * FROM support_alerts ORDER BY id DESC", conn_admin)
             conn_admin.close()
             st.dataframe(df_alerts, use_container_width=True)
             
         with tab_data:
             st.markdown("#### Global Expenses (All Users)")
-            conn_admin = sqlite3.connect("finagent_v7.db")
+            conn_admin = sqlite3.connect("finagent_v6.db")
             df_global_expenses = pd.read_sql_query("SELECT * FROM expenses", conn_admin)
             conn_admin.close()
             st.dataframe(df_global_expenses, use_container_width=True)
@@ -557,11 +485,11 @@ else:
             st.markdown("#### Cloud Database Extraction")
             st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
             try:
-                with open("finagent_v7.db", "rb") as file:
+                with open("finagent_v6.db", "rb") as file:
                     st.download_button(
-                        label="⬇️ Download finagent_v7.db",
+                        label="⬇️ Download finagent_v6.db",
                         data=file,
-                        file_name=f"finagent_v7_backup_{datetime.now().strftime('%Y%m%d')}.db",
+                        file_name=f"finagent_v6_backup_{datetime.now().strftime('%Y%m%d')}.db",
                         mime="application/x-sqlite3",
                         use_container_width=True
                     )
