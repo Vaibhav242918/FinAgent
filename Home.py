@@ -115,15 +115,31 @@ st.divider()
 # 5. Visualizations
 col_chart1, col_chart2 = st.columns(2)
 
+# --- Upgraded Professional Color Palette ---
+custom_colors = ['#00FFAA', '#00B8FF', '#7000FF', '#FF007A', '#FFB800']
+
 with col_chart1:
     st.markdown("#### 🍩 Category Breakdown")
     cursor.execute("SELECT category, SUM(amount) FROM expenses GROUP BY category")
     chart_data = cursor.fetchall()
     if chart_data:
         df = pd.DataFrame(chart_data, columns=["Category", "Amount"])
-        fig = px.pie(df, values="Amount", names="Category", hole=0.5)
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        fig.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10))
+        fig = px.pie(df, values="Amount", names="Category", hole=0.6, color_discrete_sequence=custom_colors)
+        
+        # Add realistic 3D-style borders and hover animations
+        fig.update_traces(
+            textposition='inside', 
+            textinfo='percent+label',
+            marker=dict(line=dict(color='#0b0f19', width=3)),
+            hoverinfo="label+percent+value"
+        )
+        # Apply sleek transparent layout
+        fig.update_layout(
+            showlegend=False, 
+            margin=dict(t=10, b=10, l=10, r=10),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)"
+        )
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No expenses logged yet.")
@@ -134,11 +150,23 @@ with col_chart2:
     trend_data = cursor.fetchall()
     if trend_data:
         df_trend = pd.DataFrame(trend_data, columns=["Date", "Amount"])
-        fig_trend = px.line(df_trend, x="Date", y="Amount", markers=True)
-        fig_trend.update_traces(line_color="#00FFAA")
-        fig_trend.update_layout(margin=dict(t=10, b=10, l=10, r=10))
+        # Use an area chart for a more premium, filled-in look
+        fig_trend = px.area(df_trend, x="Date", y="Amount", markers=True)
+        
+        # Add smooth lines, gradients, and interactive crosshairs
+        fig_trend.update_traces(
+            line_color="#00FFAA", 
+            fillcolor="rgba(0, 255, 170, 0.2)",
+            line=dict(shape='spline', smoothing=0.8) # Makes the line curved and smooth
+        )
+        fig_trend.update_layout(
+            hovermode="x unified", # Shows a clean vertical line when hovering
+            margin=dict(t=10, b=10, l=10, r=10),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="#1c2333"),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)"
+        )
         st.plotly_chart(fig_trend, use_container_width=True)
     else:
-        st.info("No timeline data available.")
-
-conn.close()
+        st.info("No timeline data available.") 
