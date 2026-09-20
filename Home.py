@@ -21,42 +21,43 @@ def init_db():
 
 init_db()
 
-# 1. Page Configuration & Glowing CSS
+# 1. Page Configuration & Glowing CSS (Subdued Glow)
 st.set_page_config(page_title="FinAgent - Executive AI", page_icon="🧠", layout="wide")
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Neon Glowing Buttons */
+    /* Subdued Buttons */
     .stButton>button {
         border-radius: 6px;
         font-weight: bold;
-        border: 1px solid #00E5FF;
+        border: 1px solid rgba(0, 229, 255, 0.5);
         color: #00E5FF;
         background-color: transparent;
         transition: all 0.3s ease;
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+        box-shadow: 0 0 5px rgba(0, 229, 255, 0.1);
     }
     .stButton>button:hover {
-        background-color: #00E5FF;
-        color: #070A15;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+        background-color: rgba(0, 229, 255, 0.1);
+        color: #00E5FF;
+        border: 1px solid #00E5FF;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
     }
     
-    /* Cyber-Glassmorphism Metrics */
+    /* Cyber-Glassmorphism Metrics (Subdued Glow) */
     [data-testid="stMetric"] {
         background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(0, 229, 255, 0.3);
+        border: 1px solid rgba(0, 229, 255, 0.15);
         border-radius: 10px;
         padding: 20px;
-        box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05), 0 4px 15px rgba(0,0,0,0.5);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     }
     [data-testid="stMetric"]:hover {
-        transform: translateY(-3px);
-        border: 1px solid rgba(0, 229, 255, 1);
-        box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2);
+        transform: translateY(-2px);
+        border: 1px solid rgba(0, 229, 255, 0.4);
+        box-shadow: 0 5px 15px rgba(0, 229, 255, 0.1);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -120,16 +121,16 @@ with st.container():
     with col3:
         st.metric(label="Available Liquidity", value=f"₹{current_savings:,.2f}", delta="Liquid", delta_color="normal")
     
-    # --- NEW: Cyber-Themed Glowing Progress Bar ---
+    # --- NEW: Cyber-Themed Progress Bar (Subdued Glow) ---
     progress_pct = min(100, max(0, int((current_savings / goal_target) * 100)))
     st.markdown(f"""
         <div style="padding: 20px 5px 5px 5px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span style="color: #00E5FF; font-weight: bold; font-size: 16px;">Target Acquisition: {st.session_state['goal_name']}</span>
+                <span style="color: rgba(0, 229, 255, 0.85); font-weight: bold; font-size: 16px;">Target Acquisition: {st.session_state['goal_name']}</span>
                 <span style="color: #E2E8F0; font-size: 14px; font-weight: bold;">₹{current_savings:,.0f} / ₹{goal_target:,.0f} ({progress_pct}%)</span>
             </div>
-            <div style="background-color: #111827; border-radius: 8px; height: 16px; width: 100%; border: 1px solid rgba(0, 229, 255, 0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-                <div style="background: linear-gradient(90deg, #8A2BE2, #00E5FF); width: {progress_pct}%; height: 100%; border-radius: 6px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.6); transition: width 0.5s ease-in-out;"></div>
+            <div style="background-color: #111827; border-radius: 8px; height: 14px; width: 100%; border: 1px solid rgba(0, 229, 255, 0.1); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                <div style="background: linear-gradient(90deg, #6b21a8, #00b8d4); width: {progress_pct}%; height: 100%; border-radius: 6px; box-shadow: 0 0 5px rgba(0, 229, 255, 0.25); transition: width 0.5s ease-in-out;"></div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -153,7 +154,7 @@ st.divider()
 
 # 5. Visualizations (Deep Tech Colors)
 col_chart1, col_chart2 = st.columns(2)
-deep_tech_colors = ['#00E5FF', '#8A2BE2', '#FF007F', '#F5A623', '#00FFAA'] # Cyan, Purple, Neon Pink, Orange, Green
+deep_tech_colors = ['#00E5FF', '#8A2BE2', '#FF007F', '#F5A623', '#00FFAA'] 
 
 if not df_all.empty:
     with col_chart1:
@@ -162,7 +163,7 @@ if not df_all.empty:
         fig = px.pie(df_cat, values="amount", names="category", hole=0.65, color_discrete_sequence=deep_tech_colors)
         fig.update_traces(
             textposition='inside', textinfo='percent+label',
-            marker=dict(line=dict(color='#070A15', width=4)), hoverinfo="label+percent+value"
+            marker=dict(line=dict(color='#070A15', width=3)), hoverinfo="label+percent+value"
         )
         fig.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig, use_container_width=True)
@@ -172,12 +173,12 @@ if not df_all.empty:
         df_trend = df_all.groupby('date', as_index=False)['amount'].sum().sort_values('date')
         fig_trend = px.area(df_trend, x="date", y="amount", markers=True)
         fig_trend.update_traces(
-            line_color="#00E5FF", fillcolor="rgba(0, 229, 255, 0.15)",
-            line=dict(shape='spline', smoothing=0.8), marker=dict(size=8, color="#00E5FF", line=dict(width=2, color="#070A15"))
+            line_color="#00E5FF", fillcolor="rgba(0, 229, 255, 0.1)",
+            line=dict(shape='spline', smoothing=0.8), marker=dict(size=6, color="#00E5FF", line=dict(width=1.5, color="#070A15"))
         )
         fig_trend.update_layout(
             hovermode="x unified", margin=dict(t=10, b=10, l=10, r=10),
-            xaxis=dict(showgrid=False, color="#8A2BE2"), yaxis=dict(showgrid=True, gridcolor="rgba(138, 43, 226, 0.2)", color="#8A2BE2"),
+            xaxis=dict(showgrid=False, color="rgba(138, 43, 226, 0.6)"), yaxis=dict(showgrid=True, gridcolor="rgba(138, 43, 226, 0.1)", color="rgba(138, 43, 226, 0.6)"),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
         )
         st.plotly_chart(fig_trend, use_container_width=True)
