@@ -1,164 +1,164 @@
 import streamlit as st
-
-# --- SECURITY GATEWAY ---
-if not st.session_state.get('logged_in', False):
-    st.error("🔒 Unauthorized Access. Please log in on the Home page first.")
-    st.stop()
-import pandas as pd
-import numpy as np
 import sqlite3
-import plotly.express as px
+import pandas as pd
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 import io
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
-from datetime import datetime, timedelta
 
-# --- INITIALIZE DATABASE FOR CLOUD ---
-def init_db():
-    conn = sqlite3.connect("finagent.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            category TEXT,
-            amount REAL,
-            date TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+# 1. Page Configuration
+st.set_page_config(page_title="FinAgent - Forecast & Reports", page_icon="📈", layout="wide")
 
-init_db()
-
-st.set_page_config(page_title="FinAgent - Forecast", page_icon="📈", layout="wide")
-st.title("📈 Machine Learning Forecast & Reports")
-st.markdown("Predict future spending trends and export enterprise-grade reports.")
-st.divider()
-
-# --- DASHBOARD CONTROLS (CLEAR DATA) ---
-with st.sidebar:
-    st.header("⚙️ Dashboard Controls")
-    st.markdown("Use this to wipe your old database records and reset the charts.")
-    if st.button("🗑️ Clear All Expense Data", use_container_width=True, type="primary"):
-        try:
-            conn = sqlite3.connect("finagent.db")
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM expenses")  # Wipes the table completely
-            conn.commit()
-            conn.close()
-            st.success("✅ All database records cleared!")
-            st.rerun()  # Instantly refreshes the page to remove the chart
-        except Exception as e:
-            st.error(f"Database error: {e}")
-
-# 1. Fetch Data from SQLite Database
-def get_historical_data():
-    conn = sqlite3.connect("finagent.db")
-    try:
-        df = pd.read_sql_query("SELECT date, category, amount FROM expenses ORDER BY date", conn)
-    except Exception:
-        # Fallback if the table is completely empty/just initialized
-        df = pd.DataFrame(columns=["date", "category", "amount"])
-    conn.close()
-    return df
-
-df = get_historical_data()
-
-if df.empty:
-    st.warning("⚠️ No data available. Log some expenses on the Home page first!")
-else:
-    # --- OPTION 1: PURE MATH FORECAST ---
-    st.header("🤖 30-Day Predictive Spending Model")
+# --- STYLING: Palantir Deep Tech Theme ---
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    # Data Preparation for ML
-    df['date'] = pd.to_datetime(df['date'])
-    df_daily = df.groupby('date').sum(numeric_only=True).reset_index()
+    .report-title {color: #00E5FF; font-size: 2.3rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 0px;}
+    .report-subtitle {color: #94A3B8; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 25px;}
     
-    if len(df_daily) < 3:
-        st.info("Not enough days of data to run the predictive model. Need at least 3 days of logged expenses.")
-    else:
-        # Convert dates to a numerical format (ordinal)
-        df_daily['date_ordinal'] = df_daily['date'].map(pd.Timestamp.toordinal)
-        
-        x = df_daily['date_ordinal']
-        y = df_daily['amount']
-        
-        x_mean = x.mean()
-        y_mean = y.mean()
-        
-        # Calculate Slope (m) and Intercept (c)
-        m = ((x - x_mean) * (y - y_mean)).sum() / ((x - x_mean)**2).sum()
-        c = y_mean - m * x_mean
-        
-        last_date = df_daily['date'].max()
-        future_dates = [last_date + timedelta(days=i) for i in range(1, 31)]
-        
-        future_ordinals = pd.Series([d.toordinal() for d in future_dates])
-        predictions = m * future_ordinals + c
-        
-        future_df = pd.DataFrame({'date': future_dates, 'amount': predictions, 'Type': 'Predicted'})
-        df_daily['Type'] = 'Historical'
-        
-        combined_df = pd.concat([df_daily[['date', 'amount', 'Type']], future_df])
-        combined_df['amount'] = combined_df['amount'].apply(lambda val: max(0, val))
+    .stButton>button {
+        border-radius: 6px;
+        font-weight: bold;
+        border: 1px solid #00E5FF;
+        color: #00E5FF;
+        background-color: transparent;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    .stButton>button:hover {
+        background-color: #00E5FF;
+        color: #070A15;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-        # Clean Plotly Visualization
-        fig = px.scatter(
-            combined_df, 
-            x="date", 
-            y="amount", 
-            color="Type", 
-            title="Historical Spending vs. 30-Day Forecast"
-        )
-        fig.update_traces(marker=dict(size=8))
-        st.plotly_chart(fig, use_container_width=True)
+# --- SESSION CHECK ---
+if not st.session_state.get('logged_in', False):
+    st.warning("⚠️ Access Denied: Please authenticate through the main security gateway first.")
+    st.stop()
 
-    st.divider()
+# --- HEADER SECTION ---
+st.markdown("<h1 class='report-title'>📈 Executive Forecasting & Reports</h1>", unsafe_allow_html=True)
+st.markdown("<p class='report-subtitle'>Automated PDF Report Generation • Multi-Tenant Telemetry Export</p>", unsafe_allow_html=True)
 
-    # --- OPTION 3: EXPORTABLE EXCEL REPORTS ---
-    st.header("📑 Enterprise Report Generation")
-    st.markdown("Generate a formatted `.xlsx` financial statement of your raw data.")
+# --- FETCH USER DATA ---
+conn = sqlite3.connect("finagent_v6.db")
+df_expenses = pd.read_sql_query("SELECT category, amount, date FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
+conn.close()
 
-    def generate_excel_report(dataframe):
-        output = io.BytesIO()
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Monthly Expense Report"
+total_burn = df_expenses['amount'].sum() if not df_expenses.empty else 0
+tx_count = len(df_expenses)
 
-        ws.merge_cells('A1:C1')
-        title_cell = ws['A1']
-        title_cell.value = f"FinAgent - Financial Report ({datetime.now().strftime('%Y-%m-%d')})"
-        title_cell.font = Font(size=14, bold=True, color="FFFFFF")
-        title_cell.fill = PatternFill("solid", fgColor="1F4E79")
-        title_cell.alignment = Alignment(horizontal="center")
-
-        headers = ["Date", "Category", "Amount (INR)"]
-        for col_num, header in enumerate(headers, 1):
-            cell = ws.cell(row=3, column=col_num, value=header)
-            cell.font = Font(bold=True)
-            cell.fill = PatternFill("solid", fgColor="D3D3D3")
-        
-        for row_num, row_data in enumerate(dataframe.values, 4):
-            date_val = row_data[0]
-            if isinstance(date_val, pd.Timestamp):
-                date_val = date_val.strftime('%Y-%m-%d')
-            ws.cell(row=row_num, column=1, value=date_val)
-            ws.cell(row=row_num, column=2, value=row_data[1])
-            amount_cell = ws.cell(row=row_num, column=3, value=row_data[2])
-            amount_cell.number_format = '₹#,##0.00'
-
-        ws.column_dimensions['A'].width = 15
-        ws.column_dimensions['B'].width = 20
-        ws.column_dimensions['C'].width = 15
-
-        wb.save(output)
-        return output.getvalue()
-
-    excel_data = generate_excel_report(df)
+# --- REPORTLAB PDF GENERATION FUNCTION ---
+def generate_pdf_report(username, df, total, count):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    story = []
+    styles = getSampleStyleSheet()
     
-    st.download_button(
-        label="📥 Download Formatted Excel Report",
-        data=excel_data,
-        file_name=f"FinAgent_Report_{datetime.now().strftime('%Y%m%d')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        type="primary"
+    # Custom Styles
+    title_style = ParagraphStyle(
+        'ReportTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        textColor=colors.HexColor('#0A192F'),
+        spaceAfter=6
     )
+    subtitle_style = ParagraphStyle(
+        'ReportSubtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#555555'),
+        spaceAfter=20
+    )
+    heading_style = ParagraphStyle(
+        'SectionHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#0066CC'),
+        spaceBefore=15,
+        spaceAfter=10
+    )
+    body_style = ParagraphStyle(
+        'ReportBody',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#333333'),
+        spaceAfter=6
+    )
+    
+    # Build Document Content
+    story.append(Paragraph("FinAgent Enterprise Executive Report", title_style))
+    story.append(Paragraph(f"Generated for Operator: <b>{username}</b> | Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", subtitle_style))
+    story.append(Spacer(1, 10))
+    
+    story.append(Paragraph("Executive Summary & Telemetry", heading_style))
+    story.append(Paragraph(f"• Total Recorded Transactions: <b>{count}</b>", body_style))
+    story.append(Paragraph(f"• Aggregated Capital Burn: <b>₹{total:,.2f}</b>", body_style))
+    story.append(Spacer(1, 15))
+    
+    story.append(Paragraph("Transaction Ledger Breakdown", heading_style))
+    
+    if not df.empty:
+        table_data = [["Date", "Classification", "Volume (INR)"]]
+        for _, row in df.iterrows():
+            table_data.append([str(row['date']), str(row['category']), f"₹{row['amount']:,.2f}"])
+            
+        t = Table(table_data, colWidths=[120, 200, 150])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0A192F')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 10),
+            ('BOTTOMPADDING', (0,0), (-1,0), 8),
+            ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#F8FAFC')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+            ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,1), (-1,-1), 9),
+            ('TOPPADDING', (0,1), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,1), (-1,-1), 6),
+        ]))
+        story.append(t)
+    else:
+        story.append(Paragraph("No transaction telemetry recorded for this operator yet.", body_style))
+        
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+# --- UI LAYOUT ---
+col_info, col_action = st.columns([2, 1])
+
+with col_info:
+    st.info(f"**Operator Partition:** `{st.session_state['username']}`\n\nReady to compile your encrypted telemetry ledger into a downloadable, publication-grade executive PDF document.")
+    st.markdown(f"""
+    - **Transactions Ready for Export:** `{tx_count}` entries
+    - **Total Volume:** `₹{total_burn:,.2f}`
+    """)
+
+with col_action:
+    st.markdown("#### 📄 Export Document")
+    if not df_expenses.empty:
+        pdf_data = generate_pdf_report(st.session_state['username'], df_expenses, total_burn, tx_count)
+        st.download_button(
+            label="⬇️ Download Executive PDF",
+            data=pdf_data,
+            file_name=f"FinAgent_Report_{st.session_state['username']}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+    else:
+        st.warning("No data available to compile into PDF.")
+
+st.divider()
+st.markdown("#### 📊 Live Ledger Preview")
+if not df_expenses.empty:
+    st.dataframe(df_expenses, use_container_width=True, hide_index=True)
+else:
+    st.info("Inject financial data on the Home dashboard to populate telemetry.")
