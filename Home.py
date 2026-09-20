@@ -468,25 +468,41 @@ else:
         with tab_alerts:
             st.markdown("#### 🚨 Incoming User Lockout & Support Alerts")
             st.info("Review pending lockout requests and clear them once resolved.")
-            conn_admin = sqlite3.connect("finagent_v6.db")
-            df_alerts = pd.read_sql_query("SELECT * FROM support_alerts ORDER BY id DESC", conn_admin)
-            conn_admin.close()
-            st.dataframe(df_alerts, use_container_width=True)
             
-            # 👈 NEW: Form to delete/clear specific support alert requests by ID
+            conn_admin = sqlite3.connect("finagent_v6.db")
+            df_alerts = pd.read_sql_query("SELECT * FROM support_alerts ORDER BY id ASC", conn_admin)
+            conn_admin.close()
+            
+            # 👈 AUTO-REINDEX: Dynamically overwrite DataFrame IDs to sequence 1, 2, 3... starting from top
+            if not df_alerts.empty:
+                df_alerts['id'] = range(1, len(df_alerts) + 1)
+                st.dataframe(df_alerts, use_container_width=True, hide_index=True)
+            else:
+                st.info("No active support alerts.")
+            
             st.markdown("---")
             st.markdown("#### 🗑️ Resolve / Delete Support Request")
             with st.form("delete_alert_form", clear_on_submit=True):
-                alert_id_to_delete = st.number_input("Enter Alert ID to Delete", min_value=0, step=1)
+                # Let admin pick from existing rows or type row position
+                alert_row_to_delete = st.number_input("Enter Row Number to Delete (e.g., 1, 2...)", min_value=1, step=1)
                 submit_delete_alert = st.form_submit_button("Delete Request")
                 
                 if submit_delete_alert:
                     conn_del = sqlite3.connect("finagent_v6.db")
                     cursor_del = conn_del.cursor()
-                    cursor_del.execute("DELETE FROM support_alerts WHERE id=?", (alert_id_to_delete,))
-                    conn_del.commit()
+                    # Fetch all rows ordered by ID
+                    cursor_del.execute("SELECT id FROM support_alerts ORDER BY id ASC")
+                    all_rows = cursor_del.fetchall()
+                    
+                    if all_rows and len(all_rows) >= alert_row_to_delete:
+                        # Get the true underlying database ID of the selected row number
+                        target_db_id = all_rows[alert_row_to_delete - 1][0]
+                        cursor_del.execute("DELETE FROM support_alerts WHERE id=?", (target_db_id,))
+                        conn_del.commit()
+                        st.success(f"Support request at row {alert_row_to_delete} has been cleared, and IDs have re-indexed!")
+                    else:
+                        st.error("Invalid row number selected.")
                     conn_del.close()
-                    st.success(f"Support alert ID {alert_id_to_delete} has been cleared successfully!")
                     st.rerun()
             
         with tab_data:
