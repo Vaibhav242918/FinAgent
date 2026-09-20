@@ -52,7 +52,10 @@ with st.sidebar:
     
     st.divider()
     st.header("📝 Quick Expense Logger")
+    
+    # --- NEW DATE PICKER FORM ---
     with st.form("expense_form", clear_on_submit=True):
+        exp_date = st.date_input("Date", datetime.now()) # 👈 New date picker!
         exp_category = st.selectbox("Category", ["Food", "Shopping", "Transport", "Bills", "Entertainment"])
         exp_amount = st.number_input("Amount (₹)", min_value=1.0, step=100.0)
         submitted = st.form_submit_button("Submit Expense", use_container_width=True)
@@ -60,11 +63,11 @@ with st.sidebar:
         if submitted:
             conn = sqlite3.connect("finagent.db")
             cursor = conn.cursor()
-            date_today = datetime.now().strftime("%Y-%m-%d")
-            cursor.execute('INSERT INTO expenses (category, amount, date) VALUES (?, ?, ?)', (exp_category, exp_amount, date_today))
+            date_str = exp_date.strftime("%Y-%m-%d") # 👈 Uses the selected date
+            cursor.execute('INSERT INTO expenses (category, amount, date) VALUES (?, ?, ?)', (exp_category, exp_amount, date_str))
             conn.commit()
             conn.close()
-            st.success(f"Logged ₹{exp_amount} under {exp_category}!")
+            st.success(f"Logged ₹{exp_amount} on {date_str}!")
             st.rerun()
 
     # Undo Button
