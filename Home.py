@@ -13,20 +13,24 @@ def make_hashes(password):
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
-# --- INITIALIZE MULTI-TENANT DATABASE (V4) ---
+# --- INITIALIZE MULTI-TENANT DATABASE (V5) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v4.db") 
+    conn = sqlite3.connect("finagent_v5.db") # 👈 Upgraded to V5 for Device Telemetry
     cursor = conn.cursor()
     
+    # Users Table (Now includes IP Address and Device Info)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             email TEXT UNIQUE,
             mobile TEXT UNIQUE,
             password TEXT,
-            recovery_pin TEXT
+            recovery_pin TEXT,
+            ip_address TEXT,
+            device_info TEXT
         )
     """)
+    # Expenses Table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +101,10 @@ if not st.session_state['logged_in']:
     with col_auth:
         auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
         
+        # Capture automatic device telemetry from headers & context
+        client_ip = st.context.ip_address or "127.0.0.1 (Local)"
+        device_agent = st.context.headers.get("User-Agent", "Unknown Device")
+        
         if auth_mode == "Sign In":
             with st.form("login_form"):
                 st.markdown("### 🔐 Operator Login")
@@ -105,20 +113,26 @@ if not st.session_state['logged_in']:
                 submit_login = st.form_submit_button("Initialize Session")
                 
                 if submit_login:
-                    conn = sqlite3.connect("finagent_v4.db")
+                    conn = sqlite3.connect("finagent_v5.db")
                     cursor = conn.cursor()
                     cursor.execute('''
                         SELECT username, password FROM users 
                         WHERE username=? OR email=? OR mobile=?
                     ''', (login_identifier, login_identifier, login_identifier))
                     result = cursor.fetchone()
-                    conn.close()
                     
                     if result and check_hashes(login_pass, result[1]):
+                        # Update their latest login IP and Device info
+                        cursor.execute('UPDATE users SET ip_address=?, device_info=? WHERE username=?', 
+                                       (client_ip, device_agent, result[0]))
+                        conn.commit()
+                        conn.close()
+                        
                         st.session_state['logged_in'] = True
                         st.session_state['username'] = result[0] 
                         st.rerun()
                     else:
+                        conn.close()
                         st.error("Access Denied: Invalid credentials or account not found.")
 
         elif auth_mode == "Sign Up":
@@ -128,22 +142,24 @@ if not st.session_state['logged_in']:
                 new_email = st.text_input("Gmail / Email Address *")
                 new_mobile = st.text_input("Mobile Number *")
                 new_pass = st.text_input("New Password *", type="password")
-                new_pin = st.text_input("Set a 4-Digit Recovery PIN (Store this safely) *", max_chars=4, type="password")
+                new_pin = st.text_input("Set a 4-Digit Recovery PIN *", max_chars=4, type="password")
                 submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
                     if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
                         st.error("All fields are required. Ensure PIN is exactly 4 digits.")
                     else:
-                        conn = sqlite3.connect("finagent_v4.db")
+                        conn = sqlite3.connect("finagent_v5.db")
                         cursor = conn.cursor()
                         cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
                         if cursor.fetchone():
                             st.warning("Username, Email, or Mobile Number is already registered.")
                         else:
                             hashed_pass = make_hashes(new_pass)
-                            cursor.execute('INSERT INTO users (username, email, mobile, password, recovery_pin) VALUES (?, ?, ?, ?, ?)', 
-                                           (new_user, new_email, new_mobile, hashed_pass, new_pin))
+                            cursor.execute('''
+                                INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            ''', (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
                             conn.commit()
                             st.success("Registration complete. Please switch to 'Sign In'.")
                         conn.close()
@@ -158,7 +174,7 @@ if not st.session_state['logged_in']:
                 submit_recovery = st.form_submit_button("Reset Password")
                 
                 if submit_recovery:
-                    conn = sqlite3.connect("finagent_v4.db")
+                    conn = sqlite3.connect("finagent_v5.db")
                     cursor = conn.cursor()
                     cursor.execute('''
                         SELECT username FROM users 
@@ -172,7 +188,7 @@ if not st.session_state['logged_in']:
                         conn.commit()
                         st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
                     else:
-                        st.error("Verification failed. The account was not found or the PIN is incorrect.")
+                        st.error("Verification failed. Account not found or incorrect PIN.")
                     conn.close()
 
 # ==========================================
@@ -223,12 +239,10 @@ else:
     st.divider()
 
     with st.sidebar:
-        # --- NEW: Account Settings Portal ---
         with st.expander("👤 Account Settings", expanded=False):
             st.markdown("Update your registered contact details.")
             
-            # Fetch current details
-            conn_prof = sqlite3.connect("finagent_v4.db")
+            conn_prof = sqlite3.connect("finagent_v5.db")
             cursor_prof = conn_prof.cursor()
             cursor_prof.execute("SELECT email, mobile FROM users WHERE username=?", (st.session_state['username'],))
             user_info = cursor_prof.fetchone()
@@ -247,7 +261,7 @@ else:
                         st.error("Fields cannot be empty.")
                     else:
                         try:
-                            conn_prof = sqlite3.connect("finagent_v4.db")
+                            conn_prof = sqlite3.connect("finagent_v5.db")
                             cursor_prof = conn_prof.cursor()
                             cursor_prof.execute("UPDATE users SET email=?, mobile=? WHERE username=?", (upd_email, upd_mobile, st.session_state['username']))
                             conn_prof.commit()
@@ -271,7 +285,7 @@ else:
             submitted = st.form_submit_button("Inject Data", use_container_width=True)
             
             if submitted:
-                conn = sqlite3.connect("finagent_v4.db")
+                conn = sqlite3.connect("finagent_v5.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
                 cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', 
@@ -282,7 +296,7 @@ else:
                 st.rerun()
 
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
-            conn = sqlite3.connect("finagent_v4.db")
+            conn = sqlite3.connect("finagent_v5.db")
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM expenses WHERE username=? ORDER BY id DESC LIMIT 1", (st.session_state['username'],))
             last_exp = cursor.fetchone()
@@ -292,7 +306,7 @@ else:
             conn.close()
             st.rerun()
 
-    conn = sqlite3.connect("finagent_v4.db")
+    conn = sqlite3.connect("finagent_v5.db")
     df_all = pd.read_sql_query("SELECT * FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
     conn.close()
 
@@ -389,20 +403,20 @@ else:
     if st.session_state['username'] in ['admin', 'vaibhav2429']:
         st.divider()
         st.markdown("<h3 style='color: #FF007F;'>🛡️ Override: Administrator Console</h3>", unsafe_allow_html=True)
-        st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant data.")
+        st.warning("Level 5 Clearance Authorized. You are viewing global multi-tenant device telemetry.")
         
-        tab_users, tab_data, tab_backup = st.tabs(["👥 User Credentials", "🌐 Global Telemetry", "💾 Database Download"])
+        tab_users, tab_data, tab_backup = st.tabs(["👥 User Credentials & Device Logs", "🌐 Global Telemetry", "💾 Database Download"])
         
         with tab_users:
-            st.markdown("#### Registered Users Table")
-            conn_admin = sqlite3.connect("finagent_v4.db")
-            df_users = pd.read_sql_query("SELECT * FROM users", conn_admin)
+            st.markdown("#### Registered Users & Device Telemetry")
+            conn_admin = sqlite3.connect("finagent_v5.db")
+            df_users = pd.read_sql_query("SELECT username, email, mobile, ip_address, device_info FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
             
         with tab_data:
             st.markdown("#### Global Expenses (All Users)")
-            conn_admin = sqlite3.connect("finagent_v4.db")
+            conn_admin = sqlite3.connect("finagent_v5.db")
             df_global_expenses = pd.read_sql_query("SELECT * FROM expenses", conn_admin)
             conn_admin.close()
             st.dataframe(df_global_expenses, use_container_width=True)
@@ -411,11 +425,11 @@ else:
             st.markdown("#### Cloud Database Extraction")
             st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
             try:
-                with open("finagent_v4.db", "rb") as file:
+                with open("finagent_v5.db", "rb") as file:
                     st.download_button(
-                        label="⬇️ Download finagent_v4.db",
+                        label="⬇️ Download finagent_v5.db",
                         data=file,
-                        file_name=f"finagent_v4_backup_{datetime.now().strftime('%Y%m%d')}.db",
+                        file_name=f"finagent_v5_backup_{datetime.now().strftime('%Y%m%d')}.db",
                         mime="application/x-sqlite3",
                         use_container_width=True
                     )
