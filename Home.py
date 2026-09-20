@@ -103,7 +103,7 @@ if not st.session_state['logged_in']:
         device_agent = st.context.headers.get("User-Agent", "Unknown Device")
         
         if auth_mode == "Sign In":
-            with st.form("login_form"):
+            with st.form("login_form", clear_on_submit=True): # 👈 Clears inputs on submit
                 st.markdown("### 🔐 Operator Login")
                 login_identifier = st.text_input("Username / Email / Mobile Number")
                 login_pass = st.text_input("Password", type="password")
@@ -132,7 +132,7 @@ if not st.session_state['logged_in']:
                         st.error("Access Denied: Invalid credentials or account not found.")
 
         elif auth_mode == "Sign Up":
-            with st.form("register_form"):
+            with st.form("register_form", clear_on_submit=True): # 👈 Clears inputs on submit
                 st.markdown("### 📝 Request Clearance")
                 new_user = st.text_input("New Username *")
                 new_email = st.text_input("Gmail / Email Address *")
@@ -157,11 +157,11 @@ if not st.session_state['logged_in']:
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             ''', (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
                             conn.commit()
-                            st.success("Registration complete. Please switch to 'Sign In'.")
+                            conn.success("Registration complete. Please switch to 'Sign In'.")
                         conn.close()
         
         elif auth_mode == "Recover Access":
-            with st.form("recovery_form"):
+            with st.form("recovery_form", clear_on_submit=True): # 👈 Clears inputs on submit
                 st.markdown("### 🔄 Reset Credentials")
                 st.info("Enter your identifying details and your 4-Digit Recovery PIN to create a new password.")
                 rec_identifier = st.text_input("Registered Username / Email / Mobile")
@@ -247,7 +247,7 @@ else:
             current_email = user_info[0] if user_info and user_info[0] else ""
             current_mobile = user_info[1] if user_info and user_info[1] else ""
             
-            with st.form("update_profile_form"):
+            with st.form("update_profile_form", clear_on_submit=True):
                 upd_email = st.text_input("Email Address", value=current_email)
                 upd_mobile = st.text_input("Mobile Number", value=current_mobile)
                 submit_update = st.form_submit_button("Update Profile", use_container_width=True)
@@ -406,7 +406,6 @@ else:
         with tab_users:
             st.markdown("#### Registered Users, Hash Keys & Device Telemetry")
             conn_admin = sqlite3.connect("finagent_v5.db")
-            # 👈 Updated SQL query to include the 'password' (hash key) column
             df_users = pd.read_sql_query("SELECT username, email, mobile, password, ip_address, device_info FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
