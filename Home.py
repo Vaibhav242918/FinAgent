@@ -103,7 +103,7 @@ if not st.session_state['logged_in']:
         device_agent = st.context.headers.get("User-Agent", "Unknown Device")
         
         if auth_mode == "Sign In":
-            with st.form("login_form", clear_on_submit=True): # 👈 Clears inputs on submit
+            with st.form("login_form", clear_on_submit=True):
                 st.markdown("### 🔐 Operator Login")
                 login_identifier = st.text_input("Username / Email / Mobile Number")
                 login_pass = st.text_input("Password", type="password")
@@ -132,7 +132,7 @@ if not st.session_state['logged_in']:
                         st.error("Access Denied: Invalid credentials or account not found.")
 
         elif auth_mode == "Sign Up":
-            with st.form("register_form", clear_on_submit=True): # 👈 Clears inputs on submit
+            with st.form("register_form", clear_on_submit=True):
                 st.markdown("### 📝 Request Clearance")
                 new_user = st.text_input("New Username *")
                 new_email = st.text_input("Gmail / Email Address *")
@@ -157,11 +157,11 @@ if not st.session_state['logged_in']:
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             ''', (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
                             conn.commit()
-                            conn.success("Registration complete. Please switch to 'Sign In'.")
+                            st.success("Registration complete. Please switch to 'Sign In'.")
                         conn.close()
         
         elif auth_mode == "Recover Access":
-            with st.form("recovery_form", clear_on_submit=True): # 👈 Clears inputs on submit
+            with st.form("recovery_form", clear_on_submit=True):
                 st.markdown("### 🔄 Reset Credentials")
                 st.info("Enter your identifying details and your 4-Digit Recovery PIN to create a new password.")
                 rec_identifier = st.text_input("Registered Username / Email / Mobile")
@@ -186,6 +186,14 @@ if not st.session_state['logged_in']:
                     else:
                         st.error("Verification failed. Account not found or incorrect PIN.")
                     conn.close()
+            
+            # Support Notice for completely locked out users
+            st.markdown("""
+                <div style="background-color: rgba(255, 0, 127, 0.1); border: 1px solid rgba(255, 0, 127, 0.3); border-radius: 8px; padding: 15px; margin-top: 20px; text-align: center;">
+                    <p style="color: #FF007F; font-weight: bold; margin-bottom: 5px;">Forgot both password and PIN?</p>
+                    <p style="color: #E2E8F0; font-size: 13px; margin: 0;">Contact System Administrator (<strong style="color: #00E5FF;">vaibhav2429</strong>) to request a manual database override.</p>
+                </div>
+            """, unsafe_allow_html=True)
 
 # ==========================================
 #         MAIN DASHBOARD (DEEP TECH UI)
@@ -409,6 +417,32 @@ else:
             df_users = pd.read_sql_query("SELECT username, email, mobile, password, ip_address, device_info FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
+            
+            st.markdown("---")
+            st.markdown("#### 🛠️ Administrator Account Override")
+            with st.form("admin_reset_form", clear_on_submit=True):
+                target_user = st.text_input("Enter Username to Reset")
+                new_temp_pass = st.text_input("New Temporary Password", type="password")
+                new_temp_pin = st.text_input("New 4-Digit Recovery PIN", max_chars=4, type="password")
+                submit_admin_reset = st.form_submit_button("Force Reset User Credentials")
+                
+                if submit_admin_reset:
+                    if not target_user or not new_temp_pass or len(new_temp_pin) != 4:
+                        st.error("Provide a username, new password, and a valid 4-digit PIN.")
+                    else:
+                        conn_admin = sqlite3.connect("finagent_v5.db")
+                        cursor_admin = conn_admin.cursor()
+                        cursor_admin.execute("SELECT username FROM users WHERE username=?", (target_user,))
+                        if cursor_admin.fetchone():
+                            hashed_pw = make_hashes(new_temp_pass)
+                            cursor_admin.execute("UPDATE users SET password=?, recovery_pin=? WHERE username=?", 
+                                                 (hashed_pw, new_temp_pin, target_user))
+                            conn_admin.commit()
+                            conn_admin.close()
+                            st.success(f"Successfully force-reset credentials for user: {target_user}!")
+                        else:
+                            conn_admin.close()
+                            st.error("User not found in database.")
             
         with tab_data:
             st.markdown("#### Global Expenses (All Users)")
