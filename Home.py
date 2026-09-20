@@ -13,16 +13,21 @@ def make_hashes(password):
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
-# --- INITIALIZE MULTI-TENANT DATABASE ---
+# --- INITIALIZE MULTI-TENANT DATABASE (V3) ---
 def init_db():
-    conn = sqlite3.connect("finagent_v2.db") 
+    conn = sqlite3.connect("finagent_v3.db") # 👈 Upgraded to V3 for new user schema
     cursor = conn.cursor()
+    
+    # Users Table (Now includes Email and Mobile)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
+            email TEXT UNIQUE,
+            mobile TEXT UNIQUE,
             password TEXT
         )
     """)
+    # Expenses Table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,43 +109,56 @@ if not st.session_state['logged_in']:
         if auth_mode == "Sign In":
             with st.form("login_form"):
                 st.markdown("### 🔐 Operator Login")
-                login_user = st.text_input("Username")
+                # 👈 Updated to accept all three formats
+                login_identifier = st.text_input("Username / Email / Mobile Number")
                 login_pass = st.text_input("Password", type="password")
                 submit_login = st.form_submit_button("Initialize Session")
                 
                 if submit_login:
-                    conn = sqlite3.connect("finagent_v2.db")
+                    conn = sqlite3.connect("finagent_v3.db")
                     cursor = conn.cursor()
-                    cursor.execute('SELECT password FROM users WHERE username=?', (login_user,))
+                    # 👈 Advanced SQL: Check if the input matches username, email, OR mobile
+                    cursor.execute('''
+                        SELECT username, password FROM users 
+                        WHERE username=? OR email=? OR mobile=?
+                    ''', (login_identifier, login_identifier, login_identifier))
                     result = cursor.fetchone()
                     conn.close()
                     
-                    if result and check_hashes(login_pass, result[0]):
+                    # result[1] is the password, result[0] is their core username
+                    if result and check_hashes(login_pass, result[1]):
                         st.session_state['logged_in'] = True
-                        st.session_state['username'] = login_user
+                        st.session_state['username'] = result[0] # Always set session to their base username
                         st.rerun()
                     else:
-                        st.error("Access Denied: Invalid credentials.")
+                        st.error("Access Denied: Invalid credentials or account not found.")
 
         elif auth_mode == "Sign Up":
             with st.form("register_form"):
                 st.markdown("### 📝 Request Clearance")
-                new_user = st.text_input("New Username")
-                new_pass = st.text_input("New Password", type="password")
+                new_user = st.text_input("New Username *")
+                new_email = st.text_input("Gmail / Email Address *")
+                new_mobile = st.text_input("Mobile Number *")
+                new_pass = st.text_input("New Password *", type="password")
                 submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
-                    conn = sqlite3.connect("finagent_v2.db")
-                    cursor = conn.cursor()
-                    cursor.execute('SELECT username FROM users WHERE username=?', (new_user,))
-                    if cursor.fetchone():
-                        st.warning("Username already allocated.")
+                    if not new_user or not new_email or not new_mobile or not new_pass:
+                        st.error("All fields are required.")
                     else:
-                        hashed_pass = make_hashes(new_pass)
-                        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (new_user, hashed_pass))
-                        conn.commit()
-                        st.success("Registration complete. Please switch to 'Sign In'.")
-                    conn.close()
+                        conn = sqlite3.connect("finagent_v3.db")
+                        cursor = conn.cursor()
+                        # Check if any of these already exist to prevent duplicates
+                        cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
+                        if cursor.fetchone():
+                            st.warning("Username, Email, or Mobile Number is already registered.")
+                        else:
+                            hashed_pass = make_hashes(new_pass)
+                            cursor.execute('INSERT INTO users (username, email, mobile, password) VALUES (?, ?, ?, ?)', 
+                                           (new_user, new_email, new_mobile, hashed_pass))
+                            conn.commit()
+                            st.success("Registration complete. Please switch to 'Sign In'.")
+                        conn.close()
 
 # ==========================================
 #         MAIN DASHBOARD (DEEP TECH UI)
@@ -208,7 +226,7 @@ else:
             submitted = st.form_submit_button("Inject Data", use_container_width=True)
             
             if submitted:
-                conn = sqlite3.connect("finagent_v2.db")
+                conn = sqlite3.connect("finagent_v3.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
                 cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', 
@@ -219,7 +237,7 @@ else:
                 st.rerun()
 
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
-            conn = sqlite3.connect("finagent_v2.db")
+            conn = sqlite3.connect("finagent_v3.db")
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM expenses WHERE username=? ORDER BY id DESC LIMIT 1", (st.session_state['username'],))
             last_exp = cursor.fetchone()
@@ -230,7 +248,7 @@ else:
             st.rerun()
 
     # 3. Data Fetching
-    conn = sqlite3.connect("finagent_v2.db")
+    conn = sqlite3.connect("finagent_v3.db")
     df_all = pd.read_sql_query("SELECT * FROM expenses WHERE username=?", conn, params=(st.session_state['username'],))
     conn.close()
 
@@ -337,14 +355,14 @@ else:
         
         with tab_users:
             st.markdown("#### Registered Users Table")
-            conn_admin = sqlite3.connect("finagent_v2.db")
+            conn_admin = sqlite3.connect("finagent_v3.db")
             df_users = pd.read_sql_query("SELECT * FROM users", conn_admin)
             conn_admin.close()
             st.dataframe(df_users, use_container_width=True)
             
         with tab_data:
             st.markdown("#### Global Expenses (All Users)")
-            conn_admin = sqlite3.connect("finagent_v2.db")
+            conn_admin = sqlite3.connect("finagent_v3.db")
             df_global_expenses = pd.read_sql_query("SELECT * FROM expenses", conn_admin)
             conn_admin.close()
             st.dataframe(df_global_expenses, use_container_width=True)
@@ -353,11 +371,11 @@ else:
             st.markdown("#### Cloud Database Extraction")
             st.info("Extract the raw SQLite database directly from the Streamlit Cloud server to your local machine.")
             try:
-                with open("finagent_v2.db", "rb") as file:
+                with open("finagent_v3.db", "rb") as file:
                     st.download_button(
-                        label="⬇️ Download finagent_v2.db",
+                        label="⬇️ Download finagent_v3.db",
                         data=file,
-                        file_name=f"finagent_v2_backup_{datetime.now().strftime('%Y%m%d')}.db",
+                        file_name=f"finagent_v3_backup_{datetime.now().strftime('%Y%m%d')}.db",
                         mime="application/x-sqlite3",
                         use_container_width=True
                     )
