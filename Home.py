@@ -195,7 +195,6 @@ if not st.session_state['logged_in']:
                         st.error("Verification failed. Account not found or incorrect PIN.")
                     conn.close()
             
-            # Lockout Alert Form with 5-Hour Temporary Credential Protocol
             with st.form("lockout_alert_form", clear_on_submit=True):
                 st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both password and PIN?</p>", unsafe_allow_html=True)
                 st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your details to notify admin and generate temporary fallback credentials.</p>", unsafe_allow_html=True)
@@ -214,7 +213,6 @@ if not st.session_state['logged_in']:
                         conn_alert.commit()
                         conn_alert.close()
                         
-                        # Display instant temporary credentials message
                         st.success("Alert logged! Your emergency temporary credentials have been generated:")
                         st.info("🔑 **Temporary Password:** `user@11`\n\n🔢 **Temporary PIN:** `1111`\n\n⏳ **Notice:** Please use these credentials to log in **after 5 hours**. Ensure you update them immediately once inside!")
 
@@ -469,11 +467,27 @@ else:
                             
         with tab_alerts:
             st.markdown("#### 🚨 Incoming User Lockout & Support Alerts")
-            st.info("When users request emergency access, their alert logs appear here so you can update their credentials within the 5-hour window.")
+            st.info("Review pending lockout requests and clear them once resolved.")
             conn_admin = sqlite3.connect("finagent_v6.db")
             df_alerts = pd.read_sql_query("SELECT * FROM support_alerts ORDER BY id DESC", conn_admin)
             conn_admin.close()
             st.dataframe(df_alerts, use_container_width=True)
+            
+            # 👈 NEW: Form to delete/clear specific support alert requests by ID
+            st.markdown("---")
+            st.markdown("#### 🗑️ Resolve / Delete Support Request")
+            with st.form("delete_alert_form", clear_on_submit=True):
+                alert_id_to_delete = st.number_input("Enter Alert ID to Delete", min_value=0, step=1)
+                submit_delete_alert = st.form_submit_button("Delete Request")
+                
+                if submit_delete_alert:
+                    conn_del = sqlite3.connect("finagent_v6.db")
+                    cursor_del = conn_del.cursor()
+                    cursor_del.execute("DELETE FROM support_alerts WHERE id=?", (alert_id_to_delete,))
+                    conn_del.commit()
+                    conn_del.close()
+                    st.success(f"Support alert ID {alert_id_to_delete} has been cleared successfully!")
+                    st.rerun()
             
         with tab_data:
             st.markdown("#### Global Expenses (All Users)")
