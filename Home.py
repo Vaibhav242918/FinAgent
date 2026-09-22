@@ -113,21 +113,39 @@ if not st.session_state['logged_in']:
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        .hero-title {text-align: center; color: #00E5FF; font-size: 3.2rem; font-weight: 900; margin-bottom: 0px; letter-spacing: -1.5px; text-shadow: 0 0 25px rgba(0, 229, 255, 0.4);}
-        .hero-subtitle {text-align: center; color: #94A3B8; font-size: 1.1rem; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;}
+        .hero-title {
+            text-align: center; 
+            background: linear-gradient(90deg, #00E5FF, #8A2BE2, #00FFAA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 3.4rem; 
+            font-weight: 900; 
+            margin-bottom: 5px; 
+            letter-spacing: -1.5px;
+        }
+        .hero-subtitle {
+            text-align: center; 
+            color: #94A3B8; 
+            font-size: 1.05rem; 
+            margin-bottom: 30px; 
+            text-transform: uppercase; 
+            letter-spacing: 3px; 
+            font-weight: 600;
+        }
         
-        .feature-card {
-            background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95));
-            border: 1px solid rgba(0, 229, 255, 0.2);
-            border-radius: 12px;
-            padding: 24px;
+        .info-card {
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 14px;
+            padding: 25px;
             height: 100%;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             transition: all 0.3s ease;
         }
-        .feature-card:hover {
-            border-color: rgba(0, 229, 255, 0.6);
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
+        .info-card:hover {
+            border-color: rgba(0, 229, 255, 0.7);
+            box-shadow: 0 0 25px rgba(0, 229, 255, 0.3);
+            transform: translateY(-3px);
         }
         
         div[data-testid="stForm"] {
@@ -158,16 +176,17 @@ if not st.session_state['logged_in']:
     st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise Intelligence</h1>", unsafe_allow_html=True)
     st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Telemetry & Zero-Trust Financial Hub</p>", unsafe_allow_html=True)
     
-    portal_mode = st.radio("Access Control Matrix:", ["🌟 Platform Overview & Capabilities", "🔐 Secure Authentication Terminal"], horizontal=True, label_visibility="collapsed")
+    portal_mode = st.radio("Access Control Matrix:", ["🌟 Welcome & System Architecture", "🔐 Secure Authentication Terminal"], horizontal=True, label_visibility="collapsed")
     st.markdown("<br>", unsafe_allow_html=True)
     
-    if portal_mode == "🌟 Platform Overview & Capabilities":
-        # Cinematic Command Center Banner Image
+    if portal_mode == "🌟 Welcome & System Architecture":
+        # Cinematic Welcome Banner Box
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 30px;">
-                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" 
-                     style="width: 100%; max-height: 350px; object-fit: cover; border-radius: 14px; border: 1px solid rgba(0, 229, 255, 0.3); box-shadow: 0 10px 30px rgba(0, 229, 255, 0.15);" />
-                <p style="color: #64748B; font-size: 0.85rem; margin-top: 8px; text-transform: uppercase; letter-spacing: 1px;">Palantir Deep Tech • Zero-Trust Multi-Tenant Architecture</p>
+            <div style="background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(138,43,226,0.08)); border: 1px solid rgba(0, 229, 255, 0.3); padding: 30px; border-radius: 16px; margin-bottom: 30px; text-align: center;">
+                <h2 style="color: #00E5FF; margin-top: 0; font-weight: 800;">Welcome to Next-Generation Financial Telemetry</h2>
+                <p style="color: #CBD5E1; font-size: 1.1rem; max-width: 900px; margin: 0 auto; line-height: 1.6;">
+                    FinAgent is a production-grade multi-tenant financial platform built with Palantir Deep Tech design principles. It combines zero-trust user isolation, automated SMTP emergency lockouts, and deep conversational intelligence powered by Google Gemini.
+                </p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -175,30 +194,30 @@ if not st.session_state['logged_in']:
         
         with col_c1:
             st.markdown("""
-            <div class="feature-card">
-                <h4 style="color: #00E5FF;">🤖 Gemini 3.6 Flash Engine</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">
-                    Real-time multi-agent conversational assistant powered by Google GenAI. Ingests CSV bank statements, parses historical ledgers, and synthesizes forward-looking budgets.
+            <div class="info-card">
+                <h4 style="color: #00E5FF; margin-top: 0;">🤖 Gemini 3.6 Flash Engine</h4>
+                <p style="color: #94A3B8; font-size: 0.92rem; line-height: 1.5;">
+                    Autonomous multi-agent conversational assistant. Ingests CSV bank statements, parses historical transaction vectors, and delivers forward-looking budget strategies.
                 </p>
             </div>
             """, unsafe_allow_html=True)
             
         with col_c2:
             st.markdown("""
-            <div class="feature-card">
-                <h4 style="color: #00E5FF;">🚨 Zero-Trust SMTP Recovery</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">
-                    Automated fallback protocol using Python's <code>smtplib</code> to dispatch encrypted temporary credentials straight to registered Gmail inboxes during lockouts.
+            <div class="info-card">
+                <h4 style="color: #00E5FF; margin-top: 0;">🚨 Zero-Trust SMTP Recovery</h4>
+                <p style="color: #94A3B8; font-size: 0.92rem; line-height: 1.5;">
+                    Secure lockout protocol using Python's <code>smtplib</code>. Automatically dispatches encrypted temporary fallback credentials straight to registered Gmail inboxes.
                 </p>
             </div>
             """, unsafe_allow_html=True)
             
         with col_c3:
             st.markdown("""
-            <div class="feature-card">
-                <h4 style="color: #00E5FF;">📊 Executive PDF Compilation</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">
-                    Instant generation of publication-grade PDF documents via ReportLab, compiling resume-ready project portfolios and deep technical blueprints.
+            <div class="info-card">
+                <h4 style="color: #00E5FF; margin-top: 0;">📊 Executive PDF Compilation</h4>
+                <p style="color: #94A3B8; font-size: 0.92rem; line-height: 1.5;">
+                    Instant ReportLab generation of publication-grade documents, compiling comprehensive resume profile portfolios and advanced technical architecture blueprints.
                 </p>
             </div>
             """, unsafe_allow_html=True)
@@ -207,7 +226,7 @@ if not st.session_state['logged_in']:
         col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
         with col_btn2:
             if st.button("🚀 Initialize Secure Terminal & Sign In", use_container_width=True):
-                st.toast("Switching to Secure Authentication Terminal...", icon="🔐")
+                st.toast("Redirecting to Secure Authentication Terminal...", icon="🔐")
                 st.rerun()
                 
     else:
