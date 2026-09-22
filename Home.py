@@ -1,7 +1,7 @@
 import streamlit as st
 import sqlite3
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -223,12 +223,41 @@ if not st.session_state['logged_in']:
             </div>
             """, unsafe_allow_html=True)
             
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-        with col_btn2:
-            if st.button("🚀 Initialize Secure Terminal & Sign In", use_container_width=True):
-                st.toast("Redirecting to Secure Authentication Terminal...", icon="🔐")
-                st.rerun()
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Side-by-side footer quick login section
+        col_left_banner, col_right_login = st.columns([1.2, 1])
+        
+        with col_left_banner:
+            st.markdown("""
+                <div style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(0,229,255,0.2); padding: 25px; border-radius: 12px; height: 100%;">
+                    <h4 style="color: #00E5FF; margin-top: 0;">⚡ Ready to Access Telemetry?</h4>
+                    <p style="color: #94A3B8; font-size: 0.95rem; line-height: 1.6;">
+                        Switch to the <b>Secure Authentication Terminal</b> above or use the quick login form on the right to initialize your encrypted multi-tenant session immediately.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with col_right_login:
+            with st.form("quick_footer_login", clear_on_submit=True):
+                st.markdown("<h4 style='color: #00E5FF; margin-top: 0;'>🔐 Quick Operator Login</h4>", unsafe_allow_html=True)
+                q_id = st.text_input("Username / Email", placeholder="Enter handle")
+                q_pass = st.text_input("Password", type="password", placeholder="••••••••")
+                q_submit = st.form_submit_button("Authenticate & Enter", use_container_width=True)
+                
+                if q_submit:
+                    conn = sqlite3.connect("finagent_v6.db")
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT username, password FROM users WHERE username=? OR email=? OR mobile=?', (q_id, q_id, q_id))
+                    res = cursor.fetchone()
+                    conn.close()
+                    
+                    if res and check_hashes(q_pass, res[1]):
+                        st.session_state['logged_in'] = True
+                        st.session_state['username'] = res[0]
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials.")
                 
     else:
         _, col_auth, _ = st.columns([1, 1.3, 1])
@@ -289,6 +318,7 @@ if not st.session_state['logged_in']:
                                 st.warning("Username, Email, or Mobile Number is already registered.")
                             else:
                                 hashed_pass = make_hashes(new_pass)
+                                ist_time_reg = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
                                 cursor.execute('''
                                     INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) 
                                     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -340,8 +370,9 @@ if not st.session_state['logged_in']:
                             cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
                             user_record = cursor_alert.fetchone()
                             
+                            ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
                             cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", 
-                                                 (alert_user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "PENDING"))
+                                                 (alert_user, ist_timestamp, "PENDING"))
                             conn_alert.commit()
                             conn_alert.close()
                             
