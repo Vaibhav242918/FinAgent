@@ -115,42 +115,48 @@ if not st.session_state['logged_in']:
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
+        /* Remove default Streamlit top/bottom padding gaps */
+        .block-container {
+            padding-top: 1.8rem !important;
+            padding-bottom: 1rem !important;
+        }
+        
         .hero-title {
             text-align: center; 
             background: linear-gradient(90deg, #00E5FF, #8A2BE2, #00FFAA);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 3.2rem; 
+            font-size: 3rem; 
             font-weight: 900; 
-            margin-bottom: 5px; 
-            letter-spacing: -1.5px;
+            margin-bottom: 0px; 
+            letter-spacing: -1px;
         }
         .hero-subtitle {
             text-align: center; 
             color: #94A3B8; 
-            font-size: 1rem; 
+            font-size: 0.95rem; 
             margin-bottom: 25px; 
             text-transform: uppercase; 
-            letter-spacing: 3px; 
+            letter-spacing: 2.5px; 
             font-weight: 600;
         }
         
         .info-card {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
             border: 1px solid rgba(0, 229, 255, 0.25);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 15px;
             height: 100%;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
         }
         
         /* Distinct Right Panel Styling for Login/Auth */
         .auth-panel {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
             border: 1px solid rgba(138, 43, 226, 0.5);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 10px 35px rgba(138, 43, 226, 0.2);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(138, 43, 226, 0.2);
         }
         
         .stButton>button {
@@ -173,15 +179,15 @@ if not st.session_state['logged_in']:
     st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise Intelligence</h1>", unsafe_allow_html=True)
     st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Telemetry & Zero-Trust Financial Hub</p>", unsafe_allow_html=True)
     
-    # Split Layout: Left side Welcome Info & Features, Right side Interactive Auth Gateway (Sign In / Sign Up / Recovery)
-    col_left_info, col_right_auth = st.columns([1.3, 1])
+    # Clean Split Layout
+    col_left_info, col_right_auth = st.columns([1.3, 1], gap="large")
     
     with col_left_info:
         st.markdown("""
-            <div style="background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(138,43,226,0.06)); border: 1px solid rgba(0, 229, 255, 0.25); padding: 25px; border-radius: 14px; margin-bottom: 20px;">
-                <h3 style="color: #00E5FF; margin-top: 0; font-weight: 800;">Welcome to Next-Gen Financial Telemetry</h3>
-                <p style="color: #CBD5E1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 0;">
-                    FinAgent is a production-grade multi-tenant financial platform built with Palantir Deep Tech design principles. It combines zero-trust user isolation, automated SMTP emergency lockouts, and deep conversational intelligence.
+            <div style="background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(138,43,226,0.06)); border: 1px solid rgba(0, 229, 255, 0.25); padding: 22px; border-radius: 12px; margin-bottom: 18px;">
+                <h3 style="color: #00E5FF; margin-top: 0; font-weight: 800; font-size: 1.4rem;">Next-Gen Financial Telemetry</h3>
+                <p style="color: #CBD5E1; font-size: 0.92rem; line-height: 1.5; margin-bottom: 0;">
+                    FinAgent is a production-grade multi-tenant platform built with Palantir Deep Tech design principles, featuring zero-trust isolation and automated SMTP safeguards.
                 </p>
             </div>
         """, unsafe_allow_html=True)
@@ -190,29 +196,29 @@ if not st.session_state['logged_in']:
         with col_c1:
             st.markdown("""
             <div class="info-card">
-                <h5 style="color: #00E5FF; margin-top: 0;">🤖 Gemini 3.6</h5>
-                <p style="color: #94A3B8; font-size: 0.85rem;">Autonomous multi-agent assistant with CSV bank statement ingestion.</p>
+                <h5 style="color: #00E5FF; margin-top: 0; font-size: 0.95rem;">🤖 Gemini 3.6</h5>
+                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0;">Multi-agent assistant with CSV ingestion.</p>
             </div>
             """, unsafe_allow_html=True)
         with col_c2:
             st.markdown("""
             <div class="info-card">
-                <h5 style="color: #00E5FF; margin-top: 0;">🚨 SMTP Zero-Trust</h5>
-                <p style="color: #94A3B8; font-size: 0.85rem;">Automated fallback credential dispatch via secure SMTP protocol.</p>
+                <h5 style="color: #00E5FF; margin-top: 0; font-size: 0.95rem;">🚨 SMTP Recovery</h5>
+                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0;">Encrypted temporary credential dispatch.</p>
             </div>
             """, unsafe_allow_html=True)
         with col_c3:
             st.markdown("""
             <div class="info-card">
-                <h5 style="color: #00E5FF; margin-top: 0;">📊 Executive PDF</h5>
-                <p style="color: #94A3B8; font-size: 0.85rem;">Instant ReportLab generation of resumes & technical blueprints.</p>
+                <h5 style="color: #00E5FF; margin-top: 0; font-size: 0.95rem;">📊 Executive PDF</h5>
+                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0;">Instant ReportLab resumes & blueprints.</p>
             </div>
             """, unsafe_allow_html=True)
             
         st.markdown("""
-            <div style="margin-top: 20px; background: rgba(17, 24, 39, 0.6); border-left: 3px solid #8A2BE2; padding: 15px; border-radius: 0 10px 10px 0;">
-                <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">
-                    💡 <b>Operator Notice:</b> Select your preferred access mode on the right panel to initialize your encrypted tenant session or recover credentials.
+            <div style="margin-top: 20px; background: rgba(17, 24, 39, 0.6); border-left: 3px solid #8A2BE2; padding: 12px; border-radius: 0 8px 8px 0;">
+                <p style="color: #94A3B8; font-size: 0.85rem; margin: 0;">
+                    💡 <b>Security Notice:</b> Choose <b>Sign In</b>, <b>Sign Up</b>, or <b>Recover Access</b> on the right panel to proceed.
                 </p>
             </div>
         """, unsafe_allow_html=True)
@@ -266,7 +272,7 @@ if not st.session_state['logged_in']:
                 
                 if submit_register:
                     if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
-                        st.error("All fields are required. PIN must be 4 digits.")
+                        st.error("All fields required. PIN must be 4 digits.")
                     else:
                         conn = sqlite3.connect("finagent_v6.db")
                         cursor = conn.cursor()
@@ -333,7 +339,7 @@ if not st.session_state['logged_in']:
                             send_emergency_email(user_record[0])
                         
                         st.success("🚨 Lockout protocol initiated!")
-                        st.info("📧 Credentials dispatched via SMTP to your registered Gmail inbox.")
+                        st.info("📧 Credentials dispatched via SMTP to inbox.")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
