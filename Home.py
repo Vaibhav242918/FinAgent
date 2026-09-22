@@ -3,6 +3,7 @@ import sqlite3
 import hashlib
 import random
 import string
+import re
 from datetime import datetime, timedelta, timezone
 import smtplib
 from email.mime.text import MIMEText
@@ -16,6 +17,11 @@ def make_hashes(password):
 
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
+
+# --- VALIDATION UTILITIES ---
+def is_valid_email(email):
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    return re.match(pattern, email) is not None
 
 # --- GENERATE UNIQUE TEMPORARY CREDENTIALS ---
 def generate_temp_credentials():
@@ -104,7 +110,7 @@ def init_db():
 init_db()
 
 # 1. Page Configuration
-st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="centered")
 
 # --- PERSISTENT SESSION STATE MANAGEMENT ---
 if 'logged_in' not in st.session_state:
@@ -216,7 +222,7 @@ if not st.session_state['logged_in']:
                         conn.commit()
                         st.success("Password reset successfully! You can now return and log in.")
                     else:
-                        st.error("Verification failed. Incorrect PIN or account.")
+                        st.error("❌ Verification failed. Incorrect PIN or account.")
                     conn.close()
         else:
             with st.form("lockout_alert_form", clear_on_submit=True):
@@ -227,7 +233,7 @@ if not st.session_state['logged_in']:
                 
                 if submit_alert:
                     if not alert_user:
-                        st.error("Please enter identifying details.")
+                        st.error("⚠️ Please enter identifying details.")
                     else:
                         conn_alert = sqlite3.connect("finagent_v6.db")
                         cursor_alert = conn_alert.cursor()
@@ -254,7 +260,7 @@ if not st.session_state['logged_in']:
                             st.info(f"📧 New credentials saved to database and sent via SMTP to {user_email}.")
                         else:
                             conn_alert.close()
-                            st.error("Account not found.")
+                            st.error("❌ Account not found in telemetry registry.")
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🔙 Back to Sign In"):
@@ -288,7 +294,7 @@ if not st.session_state['logged_in']:
                         st.rerun()
                     else:
                         conn.close()
-                        st.error("Access Denied: Invalid credentials.")
+                        st.error("❌ Access Denied: Invalid credentials or account not found.")
             
             st.markdown("<br>", unsafe_allow_html=True)
             col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
@@ -301,27 +307,43 @@ if not st.session_state['logged_in']:
             with st.form("register_form", clear_on_submit=True):
                 st.markdown("### 📝 Request Clearance")
                 new_user = st.text_input("New Username *")
-                new_email = st.text_input("Gmail / Email Address *")
-                new_mobile = st.text_input("Mobile Number *")
+                new_email = st.text_input("Gmail / Email Address * (e.g. user@gmail.com)")
+                
+                # Mobile number with country code integration
+                st.markdown("Mobile Number *")
+                col_cc, col_mob = st.columns([1, 3])
+                with col_cc:
+                    country_code = st.text_input("Code", value="+91", disabled=True)
+                with col_mob:
+                    raw_mobile = st.text_input("10-Digit Mobile Number", placeholder="9823410950", label_visibility="collapsed")
+                
                 new_pass = st.text_input("New Password *", type="password")
                 new_pin = st.text_input("Set 4-Digit Recovery PIN *", max_chars=4, type="password")
                 submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
-                    if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
-                        st.error("All fields required. PIN must be 4 digits.")
+                    # Combine country code and mobile number
+                    new_mobile = f"+91{raw_mobile.strip()}"
+                    
+                    # Strict Validations with clear error messages
+                    if not new_user or not new_email or not raw_mobile or not new_pass or len(new_pin) != 4:
+                        st.error("⚠️ All fields are required. Ensure PIN is exactly 4 digits.")
+                    elif not is_valid_email(new_email):
+                        st.error("❌ Invalid Email Format! Please enter a valid email address (e.g., name@gmail.com).")
+                    elif not raw_mobile.isdigit() or len(raw_mobile) != 10:
+                        st.error("❌ Invalid Mobile Number! Please enter a valid 10-digit numeric mobile number without spaces or country code.")
                     else:
                         conn = sqlite3.connect("finagent_v6.db")
                         cursor = conn.cursor()
                         cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
                         if cursor.fetchone():
-                            st.warning("Username/Email/Mobile already registered.")
+                            st.warning("⚠️ Username, Email, or Mobile Number is already registered in the system.")
                         else:
                             hashed_pass = make_hashes(new_pass)
                             cursor.execute('INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) VALUES (?, ?, ?, ?, ?, ?, ?)', 
                                            (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
                             conn.commit()
-                            st.success("Registration complete! Switch to 'Sign In'.")
+                            st.success("✅ Registration complete! Please switch to 'Sign In' tab.")
                         conn.close()
 
     st.markdown("""
@@ -341,18 +363,6 @@ if st.session_state['logged_in']:
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
-        .main-header {
-            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(7, 10, 21, 0.98));
-            border: 1px solid rgba(0, 229, 255, 0.3);
-            border-radius: 14px;
-            padding: 20px 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 8px 25px rgba(0, 229, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
         .stButton>button {
             border-radius: 6px;
             font-weight: bold;
@@ -364,20 +374,17 @@ if st.session_state['logged_in']:
         .stButton>button:hover {
             background-color: rgba(0, 229, 255, 0.1);
             color: #00E5FF;
-            border-color: #00E5FF;
         }
         
         [data-testid="stMetric"] {
-            background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95));
-            border: 1px solid rgba(0, 229, 255, 0.2);
-            border-radius: 12px;
-            padding: 22px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
         }
         </style>
         """, unsafe_allow_html=True)
 
-    # Clean Header Section with Logout
     col_h1, col_h2 = st.columns([5, 1])
     with col_h1:
         st.markdown(f"<h2 style='color: #00E5FF; margin: 0;'>🧠 FinAgent: Telemetry Hub</h2>", unsafe_allow_html=True)
@@ -401,16 +408,30 @@ if st.session_state['logged_in']:
             conn_prof.close()
             
             current_email = user_info[0] if user_info and user_info[0] else ""
-            current_mobile = user_info[1] if user_info and user_info[1] else ""
+            current_mobile_db = user_info[1] if user_info and user_info[1] else "+91"
+            # Strip +91 for display in update form if present
+            display_mobile = current_mobile_db.replace("+91", "") if current_mobile_db.startswith("+91") else current_mobile_db
             
             with st.form("update_profile_form", clear_on_submit=True):
                 upd_email = st.text_input("Email Address", value=current_email)
-                upd_mobile = st.text_input("Mobile Number", value=current_mobile)
+                
+                st.markdown("Mobile Number")
+                uc1, uc2 = st.columns([1, 3])
+                with uc1:
+                    st.text_input("CC", value="+91", disabled=True, label_visibility="collapsed")
+                with uc2:
+                    upd_raw_mobile = st.text_input("10-Digit Mobile", value=display_mobile, label_visibility="collapsed")
+                
                 submit_update = st.form_submit_button("Update Profile", use_container_width=True)
                 
                 if submit_update:
-                    if not upd_email or not upd_mobile:
-                        st.error("Fields cannot be empty.")
+                    upd_mobile = f"+91{upd_raw_mobile.strip()}"
+                    if not upd_email or not upd_raw_mobile:
+                        st.error("⚠️ Fields cannot be empty.")
+                    elif not is_valid_email(upd_email):
+                        st.error("❌ Invalid Email Address format.")
+                    elif not upd_raw_mobile.isdigit() or len(upd_raw_mobile) != 10:
+                        st.error("❌ Invalid Mobile Number! Must be exactly 10 digits.")
                     else:
                         try:
                             conn_prof = sqlite3.connect("finagent_v6.db")
@@ -418,9 +439,9 @@ if st.session_state['logged_in']:
                             cursor_prof.execute("UPDATE users SET email=?, mobile=? WHERE username=?", (upd_email, upd_mobile, st.session_state['username']))
                             conn_prof.commit()
                             conn_prof.close()
-                            st.success("Profile successfully updated!")
+                            st.success("✅ Profile successfully updated!")
                         except sqlite3.IntegrityError:
-                            st.error("That Email or Mobile is already registered.")
+                            st.error("❌ That Email or Mobile is already registered to another user.")
 
         st.divider()
         st.header("⚙️ Global Parameters")
