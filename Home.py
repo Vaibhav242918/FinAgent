@@ -106,7 +106,7 @@ init_db()
 # 1. Page Configuration
 st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="centered")
 
-# --- SESSION STATE MANAGEMENT ---
+# --- PERSISTENT SESSION STATE MANAGEMENT ---
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 if 'username' not in st.session_state:
@@ -290,7 +290,6 @@ if not st.session_state['logged_in']:
                         conn.close()
                         st.error("Access Denied: Invalid credentials.")
             
-            # Professional Forgot Password button below Sign In form
             st.markdown("<br>", unsafe_allow_html=True)
             col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
             with col_f2:
@@ -332,8 +331,6 @@ if not st.session_state['logged_in']:
             </p>
         </div>
     """, unsafe_allow_html=True)
-
-    st.stop()
 
 # ==========================================
 #        MAIN DASHBOARD (DEEP TECH UI)
