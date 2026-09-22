@@ -114,7 +114,7 @@ if not st.session_state['logged_in']:
         [data-testid="stSidebar"] {display: none;}
         
         .hero-title {text-align: center; color: #00E5FF; font-size: 3.2rem; font-weight: 900; margin-bottom: 0px; letter-spacing: -1.5px; text-shadow: 0 0 25px rgba(0, 229, 255, 0.4);}
-        .hero-subtitle {text-align: center; color: #94A3B8; font-size: 1.1rem; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;}
+        .hero-subtitle {text-align: center; color: #94A3B8; font-size: 1.1rem; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;}
         
         .feature-card {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95));
@@ -158,19 +158,17 @@ if not st.session_state['logged_in']:
     st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise Intelligence</h1>", unsafe_allow_html=True)
     st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Telemetry & Zero-Trust Financial Hub</p>", unsafe_allow_html=True)
     
-    # High-impact navigation tabs
     portal_mode = st.radio("Access Control Matrix:", ["🌟 Platform Overview & Capabilities", "🔐 Secure Authentication Terminal"], horizontal=True, label_visibility="collapsed")
     st.markdown("<br>", unsafe_allow_html=True)
     
     if portal_mode == "🌟 Platform Overview & Capabilities":
-        # Cinematic Banner
+        # Cinematic Command Center Banner Image
         st.markdown("""
-        <div style="background: linear-gradient(90deg, rgba(0,229,255,0.08), rgba(138,43,226,0.08)); border-left: 4px solid #00E5FF; padding: 20px; border-radius: 0 10px 10px 0; margin-bottom: 30px;">
-            <h3 style="color: #00E5FF; margin-top: 0;">⚡ Palantir Deep Tech Architecture</h3>
-            <p style="color: #CBD5E1; font-size: 1.05rem; margin-bottom: 0;">
-                Designed for high-performance financial auditing, behavioral tracking, and autonomous neural advisory. FinAgent isolates multi-tenant partitions with military-grade encryption and automated fail-safes.
-            </p>
-        </div>
+            <div style="text-align: center; margin-bottom: 30px;">
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" 
+                     style="width: 100%; max-height: 350px; object-fit: cover; border-radius: 14px; border: 1px solid rgba(0, 229, 255, 0.3); box-shadow: 0 10px 30px rgba(0, 229, 255, 0.15);" />
+                <p style="color: #64748B; font-size: 0.85rem; margin-top: 8px; text-transform: uppercase; letter-spacing: 1px;">Palantir Deep Tech • Zero-Trust Multi-Tenant Architecture</p>
+            </div>
         """, unsafe_allow_html=True)
         
         col_c1, col_c2, col_c3 = st.columns(3)
@@ -209,7 +207,6 @@ if not st.session_state['logged_in']:
         col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
         with col_btn2:
             if st.button("🚀 Initialize Secure Terminal & Sign In", use_container_width=True):
-                # We can store a session flag or user can switch tabs. Let's make it smooth.
                 st.toast("Switching to Secure Authentication Terminal...", icon="🔐")
                 st.rerun()
                 
