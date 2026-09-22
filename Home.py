@@ -105,7 +105,7 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#        CLEAN SINGLE-COLUMN LOGIN & EXTRA INFO
+#        PROFESSIONAL SINGLE-COLUMN AUTH
 # ==========================================
 if not st.session_state['logged_in']:
     st.markdown("""
@@ -175,7 +175,8 @@ if not st.session_state['logged_in']:
     st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise</h1>", unsafe_allow_html=True)
     st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Financial Telemetry</p>", unsafe_allow_html=True)
     
-    auth_mode = st.radio("Access Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
+    # Professional Navigation: Only Sign In and Sign Up visible initially
+    auth_mode = st.radio("Access Mode:", ["Sign In", "Sign Up", "Forgot Password?"], horizontal=True)
     st.divider()
     
     client_ip = st.context.ip_address or "127.0.0.1 (Local)"
@@ -212,7 +213,7 @@ if not st.session_state['logged_in']:
             new_email = st.text_input("Gmail / Email Address *")
             new_mobile = st.text_input("Mobile Number *")
             new_pass = st.text_input("New Password *", type="password")
-            new_pin = st.text_input("4-Digit Recovery PIN *", max_chars=4, type="password")
+            new_pin = st.text_input("Set 4-Digit Recovery PIN *", max_chars=4, type="password", help="Used to reset password if forgotten.")
             submit_register = st.form_submit_button("Register Account")
             
             if submit_register:
@@ -232,59 +233,64 @@ if not st.session_state['logged_in']:
                         st.success("Registration complete! Switch to 'Sign In'.")
                     conn.close()
     
-    elif auth_mode == "Recover Access":
-        with st.form("recovery_form", clear_on_submit=True):
-            st.markdown("### 🔄 Reset Credentials")
-            rec_identifier = st.text_input("Username / Email / Mobile")
-            rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
-            rec_new_pass = st.text_input("Enter New Password", type="password")
-            submit_recovery = st.form_submit_button("Reset Password")
-            
-            if submit_recovery:
-                conn = sqlite3.connect("finagent_v6.db")
-                cursor = conn.cursor()
-                cursor.execute('SELECT username FROM users WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
-                result = cursor.fetchone()
-                
-                if result:
-                    hashed_new_pass = make_hashes(rec_new_pass)
-                    cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
-                    conn.commit()
-                    st.success("Password reset successfully! Switch to 'Sign In'.")
-                else:
-                    st.error("Verification failed. Incorrect PIN or account.")
-                conn.close()
+    elif auth_mode == "Forgot Password?":
+        st.markdown("### 🔄 Account Recovery Portal")
+        recovery_method = st.selectbox("Choose Recovery Method:", ["Reset with 4-Digit PIN", "Request Emergency SMTP Access (Lost Both)"])
         
-        with st.form("lockout_alert_form", clear_on_submit=True):
-            st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both?</p>", unsafe_allow_html=True)
-            alert_user = st.text_input("Username / Email / Mobile")
-            submit_alert = st.form_submit_button("Request Emergency Access")
-            
-            if submit_alert:
-                if not alert_user:
-                    st.error("Please enter identifying details.")
-                else:
-                    conn_alert = sqlite3.connect("finagent_v6.db")
-                    cursor_alert = conn_alert.cursor()
-                    cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
-                    user_record = cursor_alert.fetchone()
+        if recovery_method == "Reset with 4-Digit PIN":
+            with st.form("recovery_pin_form", clear_on_submit=True):
+                st.markdown("#### Enter your PIN to create a new password")
+                rec_identifier = st.text_input("Username / Email / Mobile")
+                rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
+                rec_new_pass = st.text_input("Enter New Password", type="password")
+                submit_recovery = st.form_submit_button("Update Password")
+                
+                if submit_recovery:
+                    conn = sqlite3.connect("finagent_v6.db")
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT username FROM users WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                    result = cursor.fetchone()
                     
-                    ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
-                    cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "PENDING"))
-                    conn_alert.commit()
-                    conn_alert.close()
+                    if result:
+                        hashed_new_pass = make_hashes(rec_new_pass)
+                        cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
+                        conn.commit()
+                        st.success("Password reset successfully! Switch to 'Sign In' tab.")
+                    else:
+                        st.error("Verification failed. Incorrect PIN or account not found.")
+                    conn.close()
                     
-                    if user_record and user_record[0]:
-                        send_emergency_email(user_record[0])
-                    
-                    st.success("🚨 Lockout protocol initiated!")
-                    st.info("📧 Credentials dispatched via SMTP to inbox.")
+        else:
+            with st.form("lockout_alert_form", clear_on_submit=True):
+                st.markdown("#### 🚨 Emergency Support Request")
+                st.info("If you lost both your password and 4-digit PIN, submit your details below to trigger automated secure SMTP email dispatch.")
+                alert_user = st.text_input("Registered Username / Email / Mobile")
+                submit_alert = st.form_submit_button("Dispatch Emergency Credentials via Email")
+                
+                if submit_alert:
+                    if not alert_user:
+                        st.error("Please enter your identifying details.")
+                    else:
+                        conn_alert = sqlite3.connect("finagent_v6.db")
+                        cursor_alert = conn_alert.cursor()
+                        cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
+                        user_record = cursor_alert.fetchone()
+                        
+                        ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
+                        cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "PENDING"))
+                        conn_alert.commit()
+                        conn_alert.close()
+                        
+                        if user_record and user_record[0]:
+                            send_emergency_email(user_record[0])
+                        
+                        st.success("🚨 Emergency lockout protocol initiated!")
+                        st.info("📧 Temporary credentials have been securely dispatched via SMTP to your registered Gmail inbox.")
 
-    # Extra info footer section below login
     st.markdown("""
         <div class="extra-info-box">
             <p style="color: #94A3B8; font-size: 0.85rem; margin: 0;">
-                🔒 <b>Powered by Gemini 3.6 Flash & Zero-Trust SMTP Security</b> | Secure Multi-Tenant Architecture
+                🔒 <b>Powered by Gemini 3.6 Flash & Zero-Trust SMTP Security</b>
             </p>
         </div>
     """, unsafe_allow_html=True)
