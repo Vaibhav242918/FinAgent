@@ -134,9 +134,9 @@ if not st.session_state['logged_in']:
         [data-testid="stSidebar"] {display: none;}
         
         .block-container {
-            padding-top: 2.5rem !important;
+            padding-top: 3rem !important;
             padding-bottom: 2rem !important;
-            max-width: 600px !important;
+            max-width: 750px !important;
         }
         
         .hero-title {
@@ -144,15 +144,15 @@ if not st.session_state['logged_in']:
             background: linear-gradient(90deg, #00E5FF, #8A2BE2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 2.3rem; 
+            font-size: 2.8rem; 
             font-weight: 900; 
-            margin-bottom: 0px; 
+            margin-bottom: 5px; 
         }
         .hero-subtitle {
             text-align: center; 
             color: #94A3B8; 
-            font-size: 0.85rem; 
-            margin-bottom: 20px; 
+            font-size: 1rem; 
+            margin-bottom: 30px; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
         }
@@ -160,8 +160,8 @@ if not st.session_state['logged_in']:
         div[data-testid="stForm"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(7, 10, 21, 0.98));
             border: 1px solid rgba(0, 229, 255, 0.3);
-            border-radius: 12px;
-            padding: 30px;
+            border-radius: 14px;
+            padding: 35px;
             box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
         }
         
@@ -169,8 +169,8 @@ if not st.session_state['logged_in']:
             background: rgba(17, 24, 39, 0.6);
             border: 1px solid rgba(138, 43, 226, 0.3);
             border-radius: 10px;
-            padding: 12px;
-            margin-top: 15px;
+            padding: 15px;
+            margin-top: 25px;
             text-align: center;
         }
         
@@ -182,6 +182,7 @@ if not st.session_state['logged_in']:
             background-color: transparent;
             transition: all 0.3s ease;
             width: 100%;
+            padding: 0.5rem 1rem;
         }
         .stButton>button:hover {
             background-color: #00E5FF;
@@ -354,7 +355,7 @@ if not st.session_state['logged_in']:
 
     st.markdown("""
         <div class="extra-info-box">
-            <p style="color: #94A3B8; font-size: 0.85rem; margin: 0;">
+            <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">
                 🔒 <b>Powered by Gemini 3.6 Flash & Zero-Trust SMTP Security</b>
             </p>
         </div>
