@@ -18,13 +18,13 @@ def check_hashes(password, hashed_text):
 
 # --- SMTP EMAIL DISPATCH UTILITY ---
 def send_emergency_email(to_email):
-    # Use Streamlit Secrets for secure production credentials or fallback placeholders
+    # Using your configured credentials directly with fallback support
     try:
-        sender_email = st.secrets["SMTP_EMAIL"]
-        sender_password = st.secrets["SMTP_PASSWORD"]
+        sender_email = st.secrets.get("SMTP_EMAIL", "vaibhavwaghole2429@gmail.com")
+        sender_password = st.secrets.get("SMTP_PASSWORD", "dgqurhpvxyvuupgz")
     except Exception:
-        sender_email = "finagent.security.gateway@gmail.com"
-        sender_password = "app_password_placeholder"
+        sender_email = "vaibhavwaghole2429@gmail.com"
+        sender_password = "dgqurhpvxyvuupgz"
     
     subject = "FinAgent Enterprise Security - Emergency Temporary Credentials"
     body = f"""
@@ -107,7 +107,7 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#         AUTHENTICATION GATEWAY
+#        AUTHENTICATION GATEWAY
 # ==========================================
 if not st.session_state['logged_in']:
     st.markdown("""
@@ -254,7 +254,6 @@ if not st.session_state['logged_in']:
                     else:
                         conn_alert = sqlite3.connect("finagent_v6.db")
                         cursor_alert = conn_alert.cursor()
-                        # Lookup email from users table to dispatch SMTP email
                         cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
                         user_record = cursor_alert.fetchone()
                         
@@ -270,7 +269,7 @@ if not st.session_state['logged_in']:
                         st.info("🔑 **Temporary Password:** `user@11`\n\n🔢 **Temporary PIN:** `1111`\n\n📧 **Notice:** An email has been dispatched to your registered address. Please use these credentials to log in **after 5 hours**.")
 
 # ==========================================
-#         MAIN DASHBOARD (DEEP TECH UI)
+#        MAIN DASHBOARD (DEEP TECH UI)
 # ==========================================
 else:
     st.markdown("""
