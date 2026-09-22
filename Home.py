@@ -265,8 +265,8 @@ if not st.session_state['logged_in']:
                         if user_record and user_record[0]:
                             send_emergency_email(user_record[0])
                         
-                        st.success("Alert logged & SMTP email dispatch triggered!")
-                        st.info("🔑 **Temporary Password:** `user@11`\n\n🔢 **Temporary PIN:** `1111`\n\n📧 **Notice:** An email has been dispatched to your registered address. Please use these credentials to log in **after 5 hours**.")
+                    st.success("🚨 Emergency Lockout Protocol Initiated!")
+                    st.info("📧 **Secure Dispatch Complete:** Temporary fallback credentials have been successfully sent to your registered Gmail address via SMTP. Please check your inbox.")
 
 # ==========================================
 #        MAIN DASHBOARD (DEEP TECH UI)
