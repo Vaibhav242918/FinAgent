@@ -132,9 +132,9 @@ if not st.session_state['logged_in']:
         [data-testid="stSidebar"] {display: none;}
         
         .block-container {
-            padding-top: 3rem !important;
+            padding-top: 2.5rem !important;
             padding-bottom: 2rem !important;
-            max-width: 650px !important;
+            max-width: 600px !important;
         }
         
         .hero-title {
@@ -142,15 +142,15 @@ if not st.session_state['logged_in']:
             background: linear-gradient(90deg, #00E5FF, #8A2BE2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 2.5rem; 
+            font-size: 2.3rem; 
             font-weight: 900; 
             margin-bottom: 0px; 
         }
         .hero-subtitle {
             text-align: center; 
             color: #94A3B8; 
-            font-size: 0.9rem; 
-            margin-bottom: 25px; 
+            font-size: 0.85rem; 
+            margin-bottom: 20px; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
         }
@@ -159,7 +159,7 @@ if not st.session_state['logged_in']:
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(7, 10, 21, 0.98));
             border: 1px solid rgba(0, 229, 255, 0.3);
             border-radius: 12px;
-            padding: 25px;
+            padding: 30px;
             box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
         }
         
@@ -167,8 +167,8 @@ if not st.session_state['logged_in']:
             background: rgba(17, 24, 39, 0.6);
             border: 1px solid rgba(138, 43, 226, 0.3);
             border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
+            padding: 12px;
+            margin-top: 15px;
             text-align: center;
         }
         
@@ -309,29 +309,26 @@ if not st.session_state['logged_in']:
                 new_user = st.text_input("New Username *")
                 new_email = st.text_input("Gmail / Email Address * (e.g. user@gmail.com)")
                 
-                # Mobile number with country code integration
                 st.markdown("Mobile Number *")
-                col_cc, col_mob = st.columns([1, 3])
+                col_cc, col_mob = st.columns([1, 4])
                 with col_cc:
-                    country_code = st.text_input("Code", value="+91", disabled=True)
+                    st.text_input("CC", value="+91", disabled=True, label_visibility="collapsed")
                 with col_mob:
-                    raw_mobile = st.text_input("10-Digit Mobile Number", placeholder="9823410950", label_visibility="collapsed")
+                    raw_mobile = st.text_input("10-Digit Mobile", placeholder="9823410950", label_visibility="collapsed")
                 
                 new_pass = st.text_input("New Password *", type="password")
                 new_pin = st.text_input("Set 4-Digit Recovery PIN *", max_chars=4, type="password")
                 submit_register = st.form_submit_button("Register Account")
                 
                 if submit_register:
-                    # Combine country code and mobile number
                     new_mobile = f"+91{raw_mobile.strip()}"
                     
-                    # Strict Validations with clear error messages
                     if not new_user or not new_email or not raw_mobile or not new_pass or len(new_pin) != 4:
                         st.error("⚠️ All fields are required. Ensure PIN is exactly 4 digits.")
                     elif not is_valid_email(new_email):
                         st.error("❌ Invalid Email Format! Please enter a valid email address (e.g., name@gmail.com).")
                     elif not raw_mobile.isdigit() or len(raw_mobile) != 10:
-                        st.error("❌ Invalid Mobile Number! Please enter a valid 10-digit numeric mobile number without spaces or country code.")
+                        st.error("❌ Invalid Mobile Number! Please enter a valid 10-digit numeric mobile number.")
                     else:
                         conn = sqlite3.connect("finagent_v6.db")
                         cursor = conn.cursor()
@@ -409,14 +406,13 @@ if st.session_state['logged_in']:
             
             current_email = user_info[0] if user_info and user_info[0] else ""
             current_mobile_db = user_info[1] if user_info and user_info[1] else "+91"
-            # Strip +91 for display in update form if present
             display_mobile = current_mobile_db.replace("+91", "") if current_mobile_db.startswith("+91") else current_mobile_db
             
             with st.form("update_profile_form", clear_on_submit=True):
                 upd_email = st.text_input("Email Address", value=current_email)
                 
                 st.markdown("Mobile Number")
-                uc1, uc2 = st.columns([1, 3])
+                uc1, uc2 = st.columns([1, 4])
                 with uc1:
                     st.text_input("CC", value="+91", disabled=True, label_visibility="collapsed")
                 with uc2:
