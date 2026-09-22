@@ -1,6 +1,8 @@
 import streamlit as st
 import sqlite3
 import hashlib
+import random
+import string
 from datetime import datetime, timedelta, timezone
 import smtplib
 from email.mime.text import MIMEText
@@ -15,8 +17,14 @@ def make_hashes(password):
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
-# --- SMTP EMAIL DISPATCH UTILITY ---
-def send_emergency_email(to_email):
+# --- GENERATE UNIQUE TEMPORARY CREDENTIALS ---
+def generate_temp_credentials():
+    temp_pwd = "Temp@" + "".join(random.choices(string.ascii_letters + string.digits, k=6))
+    temp_pin = "".join(random.choices(string.digits, k=4))
+    return temp_pwd, temp_pin
+
+# --- SMTP EMAIL DISPATCH UTILITY WITH UNIQUE CREDENTIALS ---
+def send_emergency_email(to_email, temp_pwd, temp_pin):
     try:
         sender_email = st.secrets.get("SMTP_EMAIL", "vaibhavwaghole2429@gmail.com")
         sender_password = st.secrets.get("SMTP_PASSWORD", "dgqurhpvxyvuupgz")
@@ -24,17 +32,17 @@ def send_emergency_email(to_email):
         sender_email = "vaibhavwaghole2429@gmail.com"
         sender_password = "dgqurhpvxyvuupgz"
     
-    subject = "FinAgent Enterprise Security - Emergency Temporary Credentials"
+    subject = "FinAgent Enterprise Security - Unique Emergency Temporary Credentials"
     body = f"""
     Hello Operator,
     
     An emergency access request was initiated for your FinAgent account.
-    Your temporary fallback credentials are:
+    Your unique temporary fallback credentials are:
     
-    - Temporary Password: user@11
-    - Temporary PIN: 1111
+    - Temporary Password: {temp_pwd}
+    - Temporary Recovery PIN: {temp_pin}
     
-    Notice: Please use these credentials to log in after 5 hours. Ensure you update your password and PIN immediately once inside your dashboard.
+    Notice: Please use these credentials to log in. Ensure you update your password immediately once inside your dashboard.
     
     Regards,
     FinAgent Zero-Trust Security Gateway
@@ -175,7 +183,6 @@ if not st.session_state['logged_in']:
     st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise</h1>", unsafe_allow_html=True)
     st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Financial Telemetry</p>", unsafe_allow_html=True)
     
-    # Standard clean tabs: Sign In or Sign Up
     auth_mode = st.radio("Access Mode:", ["Sign In", "Sign Up"], horizontal=True)
     st.divider()
     
@@ -188,9 +195,7 @@ if not st.session_state['logged_in']:
             login_identifier = st.text_input("Username / Email / Mobile")
             login_pass = st.text_input("Password", type="password")
             
-            # Professional toggle inside Sign In form for password recovery
             forgot_toggle = st.checkbox("🔑 Forgot Password? Click here to reset")
-            
             submit_login = st.form_submit_button("Initialize Session")
             
             if submit_login:
@@ -210,7 +215,6 @@ if not st.session_state['logged_in']:
                     conn.close()
                     st.error("Access Denied: Invalid credentials.")
         
-        # If user checked 'Forgot Password', render the recovery options right below the login form
         if forgot_toggle:
             st.markdown("<br>", unsafe_allow_html=True)
             with st.container():
@@ -246,10 +250,10 @@ if not st.session_state['logged_in']:
                             conn.close()
                 else:
                     with st.form("lockout_alert_form", clear_on_submit=True):
-                        st.markdown("##### 🚨 Emergency SMTP Support")
-                        st.info("If you lost both your password and PIN, submit your identifier to trigger automated SMTP credential dispatch.")
+                        st.markdown("##### 🚨 Emergency SMTP Support (Unique Credentials)")
+                        st.info("If you lost both, a unique temporary password and PIN will be generated, saved in the database, and emailed to you.")
                         alert_user = st.text_input("Username / Email / Mobile", key="alert_id_input")
-                        submit_alert = st.form_submit_button("Dispatch Emergency Credentials via Email")
+                        submit_alert = st.form_submit_button("Dispatch Unique Emergency Credentials")
                         
                         if submit_alert:
                             if not alert_user:
@@ -257,19 +261,32 @@ if not st.session_state['logged_in']:
                             else:
                                 conn_alert = sqlite3.connect("finagent_v6.db")
                                 cursor_alert = conn_alert.cursor()
-                                cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
+                                cursor_alert.execute("SELECT username, email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
                                 user_record = cursor_alert.fetchone()
                                 
-                                ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
-                                cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "PENDING"))
-                                conn_alert.commit()
-                                conn_alert.close()
-                                
-                                if user_record and user_record[0]:
-                                    send_emergency_email(user_record[0])
-                                
-                                st.success("🚨 Emergency lockout protocol initiated!")
-                                st.info("📧 Temporary credentials have been dispatched via SMTP to your registered Gmail inbox.")
+                                if user_record:
+                                    username_found, user_email = user_record[0], user_record[1]
+                                    
+                                    # Generate Unique Credentials
+                                    t_pwd, t_pin = generate_temp_credentials()
+                                    hashed_t_pwd = make_hashes(t_pwd)
+                                    
+                                    # Update database so admin/user can see/reset it
+                                    cursor_alert.execute("UPDATE users SET password=?, recovery_pin=? WHERE username=?", (hashed_t_pwd, t_pin, username_found))
+                                    
+                                    ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
+                                    cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, f"RESOLVED (Temp PWD: {t_pwd} | PIN: {t_pin})"))
+                                    conn_alert.commit()
+                                    conn_alert.close()
+                                    
+                                    if user_email:
+                                        send_emergency_email(user_email, t_pwd, t_pin)
+                                    
+                                    st.success("🚨 Unique Emergency Credentials Generated & Dispatched!")
+                                    st.info(f"📧 New unique password and PIN have been saved to database and sent via SMTP to {user_email}.")
+                                else:
+                                    conn_alert.close()
+                                    st.error("Account not found.")
 
     elif auth_mode == "Sign Up":
         with st.form("register_form", clear_on_submit=True):
@@ -278,7 +295,7 @@ if not st.session_state['logged_in']:
             new_email = st.text_input("Gmail / Email Address *")
             new_mobile = st.text_input("Mobile Number *")
             new_pass = st.text_input("New Password *", type="password")
-            new_pin = st.text_input("Set 4-Digit Recovery PIN *", max_chars=4, type="password", help="Used to reset password if forgotten.")
+            new_pin = st.text_input("Set 4-Digit Recovery PIN *", max_chars=4, type="password")
             submit_register = st.form_submit_button("Register Account")
             
             if submit_register:
