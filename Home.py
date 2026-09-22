@@ -105,7 +105,7 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#        PROFESSIONAL SINGLE-COLUMN AUTH
+#        PROFESSIONAL AUTH GATEWAY
 # ==========================================
 if not st.session_state['logged_in']:
     st.markdown("""
@@ -175,8 +175,8 @@ if not st.session_state['logged_in']:
     st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise</h1>", unsafe_allow_html=True)
     st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Financial Telemetry</p>", unsafe_allow_html=True)
     
-    # Professional Navigation: Only Sign In and Sign Up visible initially
-    auth_mode = st.radio("Access Mode:", ["Sign In", "Sign Up", "Forgot Password?"], horizontal=True)
+    # Standard clean tabs: Sign In or Sign Up
+    auth_mode = st.radio("Access Mode:", ["Sign In", "Sign Up"], horizontal=True)
     st.divider()
     
     client_ip = st.context.ip_address or "127.0.0.1 (Local)"
@@ -187,6 +187,10 @@ if not st.session_state['logged_in']:
             st.markdown("### 🔐 Operator Login")
             login_identifier = st.text_input("Username / Email / Mobile")
             login_pass = st.text_input("Password", type="password")
+            
+            # Professional toggle inside Sign In form for password recovery
+            forgot_toggle = st.checkbox("🔑 Forgot Password? Click here to reset")
+            
             submit_login = st.form_submit_button("Initialize Session")
             
             if submit_login:
@@ -205,6 +209,67 @@ if not st.session_state['logged_in']:
                 else:
                     conn.close()
                     st.error("Access Denied: Invalid credentials.")
+        
+        # If user checked 'Forgot Password', render the recovery options right below the login form
+        if forgot_toggle:
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.container():
+                st.markdown("""
+                    <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(0, 229, 255, 0.4); padding: 20px; border-radius: 12px;">
+                        <h4 style="color: #00E5FF; margin-top: 0;">🔄 Account Recovery Portal</h4>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                recovery_method = st.radio("Select Recovery Option:", ["Reset with 4-Digit PIN", "Request Emergency SMTP Access (Lost Both)"], key="rec_method_radio")
+                
+                if recovery_method == "Reset with 4-Digit PIN":
+                    with st.form("recovery_pin_form", clear_on_submit=True):
+                        st.markdown("##### Enter your 4-Digit Recovery PIN")
+                        rec_identifier = st.text_input("Username / Email / Mobile", key="rec_id")
+                        rec_pin = st.text_input("4-Digit PIN", max_chars=4, type="password", key="rec_pin_input")
+                        rec_new_pass = st.text_input("Enter New Password", type="password", key="rec_new_pwd")
+                        submit_recovery = st.form_submit_button("Update Password")
+                        
+                        if submit_recovery:
+                            conn = sqlite3.connect("finagent_v6.db")
+                            cursor = conn.cursor()
+                            cursor.execute('SELECT username FROM users WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                            result = cursor.fetchone()
+                            
+                            if result:
+                                hashed_new_pass = make_hashes(rec_new_pass)
+                                cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
+                                conn.commit()
+                                st.success("Password reset successfully! You can now log in.")
+                            else:
+                                st.error("Verification failed. Incorrect PIN or account.")
+                            conn.close()
+                else:
+                    with st.form("lockout_alert_form", clear_on_submit=True):
+                        st.markdown("##### 🚨 Emergency SMTP Support")
+                        st.info("If you lost both your password and PIN, submit your identifier to trigger automated SMTP credential dispatch.")
+                        alert_user = st.text_input("Username / Email / Mobile", key="alert_id_input")
+                        submit_alert = st.form_submit_button("Dispatch Emergency Credentials via Email")
+                        
+                        if submit_alert:
+                            if not alert_user:
+                                st.error("Please enter identifying details.")
+                            else:
+                                conn_alert = sqlite3.connect("finagent_v6.db")
+                                cursor_alert = conn_alert.cursor()
+                                cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
+                                user_record = cursor_alert.fetchone()
+                                
+                                ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
+                                cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "PENDING"))
+                                conn_alert.commit()
+                                conn_alert.close()
+                                
+                                if user_record and user_record[0]:
+                                    send_emergency_email(user_record[0])
+                                
+                                st.success("🚨 Emergency lockout protocol initiated!")
+                                st.info("📧 Temporary credentials have been dispatched via SMTP to your registered Gmail inbox.")
 
     elif auth_mode == "Sign Up":
         with st.form("register_form", clear_on_submit=True):
@@ -232,60 +297,6 @@ if not st.session_state['logged_in']:
                         conn.commit()
                         st.success("Registration complete! Switch to 'Sign In'.")
                     conn.close()
-    
-    elif auth_mode == "Forgot Password?":
-        st.markdown("### 🔄 Account Recovery Portal")
-        recovery_method = st.selectbox("Choose Recovery Method:", ["Reset with 4-Digit PIN", "Request Emergency SMTP Access (Lost Both)"])
-        
-        if recovery_method == "Reset with 4-Digit PIN":
-            with st.form("recovery_pin_form", clear_on_submit=True):
-                st.markdown("#### Enter your PIN to create a new password")
-                rec_identifier = st.text_input("Username / Email / Mobile")
-                rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
-                rec_new_pass = st.text_input("Enter New Password", type="password")
-                submit_recovery = st.form_submit_button("Update Password")
-                
-                if submit_recovery:
-                    conn = sqlite3.connect("finagent_v6.db")
-                    cursor = conn.cursor()
-                    cursor.execute('SELECT username FROM users WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
-                    result = cursor.fetchone()
-                    
-                    if result:
-                        hashed_new_pass = make_hashes(rec_new_pass)
-                        cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
-                        conn.commit()
-                        st.success("Password reset successfully! Switch to 'Sign In' tab.")
-                    else:
-                        st.error("Verification failed. Incorrect PIN or account not found.")
-                    conn.close()
-                    
-        else:
-            with st.form("lockout_alert_form", clear_on_submit=True):
-                st.markdown("#### 🚨 Emergency Support Request")
-                st.info("If you lost both your password and 4-digit PIN, submit your details below to trigger automated secure SMTP email dispatch.")
-                alert_user = st.text_input("Registered Username / Email / Mobile")
-                submit_alert = st.form_submit_button("Dispatch Emergency Credentials via Email")
-                
-                if submit_alert:
-                    if not alert_user:
-                        st.error("Please enter your identifying details.")
-                    else:
-                        conn_alert = sqlite3.connect("finagent_v6.db")
-                        cursor_alert = conn_alert.cursor()
-                        cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
-                        user_record = cursor_alert.fetchone()
-                        
-                        ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
-                        cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "PENDING"))
-                        conn_alert.commit()
-                        conn_alert.close()
-                        
-                        if user_record and user_record[0]:
-                            send_emergency_email(user_record[0])
-                        
-                        st.success("🚨 Emergency lockout protocol initiated!")
-                        st.info("📧 Temporary credentials have been securely dispatched via SMTP to your registered Gmail inbox.")
 
     st.markdown("""
         <div class="extra-info-box">
