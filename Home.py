@@ -96,7 +96,7 @@ def init_db():
 init_db()
 
 # 1. Page Configuration
-st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="centered")
 
 # --- SESSION STATE MANAGEMENT ---
 if 'logged_in' not in st.session_state:
@@ -105,7 +105,7 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#        PRE-LOGIN SPLIT LANDING & AUTH GATEWAY
+#        CLEAN SINGLE-COLUMN LOGIN & EXTRA INFO
 # ==========================================
 if not st.session_state['logged_in']:
     st.markdown("""
@@ -115,48 +115,45 @@ if not st.session_state['logged_in']:
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        /* Remove default Streamlit top/bottom padding gaps */
         .block-container {
-            padding-top: 1.8rem !important;
-            padding-bottom: 1rem !important;
+            padding-top: 2rem !important;
+            padding-bottom: 2rem !important;
+            max-width: 650px !important;
         }
         
         .hero-title {
             text-align: center; 
-            background: linear-gradient(90deg, #00E5FF, #8A2BE2, #00FFAA);
+            background: linear-gradient(90deg, #00E5FF, #8A2BE2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 3rem; 
+            font-size: 2.5rem; 
             font-weight: 900; 
             margin-bottom: 0px; 
-            letter-spacing: -1px;
         }
         .hero-subtitle {
             text-align: center; 
             color: #94A3B8; 
-            font-size: 0.95rem; 
+            font-size: 0.9rem; 
             margin-bottom: 25px; 
             text-transform: uppercase; 
-            letter-spacing: 2.5px; 
-            font-weight: 600;
+            letter-spacing: 2px; 
         }
         
-        .info-card {
-            background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
-            border: 1px solid rgba(0, 229, 255, 0.25);
+        div[data-testid="stForm"] {
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(7, 10, 21, 0.98));
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
+        }
+        
+        .extra-info-box {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(138, 43, 226, 0.3);
             border-radius: 10px;
             padding: 15px;
-            height: 100%;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-        }
-        
-        /* Distinct Right Panel Styling for Login/Auth */
-        .auth-panel {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
-            border: 1px solid rgba(138, 43, 226, 0.5);
-            border-radius: 14px;
-            padding: 20px;
-            box-shadow: 0 8px 25px rgba(138, 43, 226, 0.2);
+            margin-top: 20px;
+            text-align: center;
         }
         
         .stButton>button {
@@ -171,177 +168,126 @@ if not st.session_state['logged_in']:
         .stButton>button:hover {
             background-color: #00E5FF;
             color: #070A15;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
         }
         </style>
         """, unsafe_allow_html=True)
     
-    st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise Intelligence</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Telemetry & Zero-Trust Financial Hub</p>", unsafe_allow_html=True)
+    st.markdown("<h1 class='hero-title'>🛡️ FinAgent Enterprise</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='hero-subtitle'>Autonomous Multi-Tenant Financial Telemetry</p>", unsafe_allow_html=True)
     
-    # Clean Split Layout
-    col_left_info, col_right_auth = st.columns([1.3, 1], gap="large")
+    auth_mode = st.radio("Access Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
+    st.divider()
     
-    with col_left_info:
-        st.markdown("""
-            <div style="background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(138,43,226,0.06)); border: 1px solid rgba(0, 229, 255, 0.25); padding: 22px; border-radius: 12px; margin-bottom: 18px;">
-                <h3 style="color: #00E5FF; margin-top: 0; font-weight: 800; font-size: 1.4rem;">Next-Gen Financial Telemetry</h3>
-                <p style="color: #CBD5E1; font-size: 0.92rem; line-height: 1.5; margin-bottom: 0;">
-                    FinAgent is a production-grade multi-tenant platform built with Palantir Deep Tech design principles, featuring zero-trust isolation and automated SMTP safeguards.
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        col_c1, col_c2, col_c3 = st.columns(3)
-        with col_c1:
-            st.markdown("""
-            <div class="info-card">
-                <h5 style="color: #00E5FF; margin-top: 0; font-size: 0.95rem;">🤖 Gemini 3.6</h5>
-                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0;">Multi-agent assistant with CSV ingestion.</p>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_c2:
-            st.markdown("""
-            <div class="info-card">
-                <h5 style="color: #00E5FF; margin-top: 0; font-size: 0.95rem;">🚨 SMTP Recovery</h5>
-                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0;">Encrypted temporary credential dispatch.</p>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_c3:
-            st.markdown("""
-            <div class="info-card">
-                <h5 style="color: #00E5FF; margin-top: 0; font-size: 0.95rem;">📊 Executive PDF</h5>
-                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0;">Instant ReportLab resumes & blueprints.</p>
-            </div>
-            """, unsafe_allow_html=True)
+    client_ip = st.context.ip_address or "127.0.0.1 (Local)"
+    device_agent = st.context.headers.get("User-Agent", "Unknown Device")
+    
+    if auth_mode == "Sign In":
+        with st.form("login_form", clear_on_submit=True):
+            st.markdown("### 🔐 Operator Login")
+            login_identifier = st.text_input("Username / Email / Mobile")
+            login_pass = st.text_input("Password", type="password")
+            submit_login = st.form_submit_button("Initialize Session")
             
-        st.markdown("""
-            <div style="margin-top: 20px; background: rgba(17, 24, 39, 0.6); border-left: 3px solid #8A2BE2; padding: 12px; border-radius: 0 8px 8px 0;">
-                <p style="color: #94A3B8; font-size: 0.85rem; margin: 0;">
-                    💡 <b>Security Notice:</b> Choose <b>Sign In</b>, <b>Sign Up</b>, or <b>Recover Access</b> on the right panel to proceed.
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with col_right_auth:
-        st.markdown("<div class='auth-panel'>", unsafe_allow_html=True)
-        auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
-        st.divider()
-        
-        client_ip = st.context.ip_address or "127.0.0.1 (Local)"
-        device_agent = st.context.headers.get("User-Agent", "Unknown Device")
-        
-        if auth_mode == "Sign In":
-            with st.form("login_form", clear_on_submit=True):
-                st.markdown("### 🔐 Operator Login")
-                login_identifier = st.text_input("Username / Email / Mobile Number")
-                login_pass = st.text_input("Password", type="password")
-                submit_login = st.form_submit_button("Initialize Session")
+            if submit_login:
+                conn = sqlite3.connect("finagent_v6.db")
+                cursor = conn.cursor()
+                cursor.execute('SELECT username, password FROM users WHERE username=? OR email=? OR mobile=?', (login_identifier, login_identifier, login_identifier))
+                result = cursor.fetchone()
                 
-                if submit_login:
-                    conn = sqlite3.connect("finagent_v6.db")
-                    cursor = conn.cursor()
-                    cursor.execute('''
-                        SELECT username, password FROM users 
-                        WHERE username=? OR email=? OR mobile=?
-                    ''', (login_identifier, login_identifier, login_identifier))
-                    result = cursor.fetchone()
-                    
-                    if result and check_hashes(login_pass, result[1]):
-                        cursor.execute('UPDATE users SET ip_address=?, device_info=? WHERE username=?', 
-                                       (client_ip, device_agent, result[0]))
-                        conn.commit()
-                        conn.close()
-                        
-                        st.session_state['logged_in'] = True
-                        st.session_state['username'] = result[0] 
-                        st.rerun()
-                    else:
-                        conn.close()
-                        st.error("Access Denied: Invalid credentials or account not found.")
-
-        elif auth_mode == "Sign Up":
-            with st.form("register_form", clear_on_submit=True):
-                st.markdown("### 📝 Request Clearance")
-                new_user = st.text_input("New Username *")
-                new_email = st.text_input("Gmail / Email Address *")
-                new_mobile = st.text_input("Mobile Number *")
-                new_pass = st.text_input("New Password *", type="password")
-                new_pin = st.text_input("Set 4-Digit Recovery PIN *", max_chars=4, type="password")
-                submit_register = st.form_submit_button("Register Account")
-                
-                if submit_register:
-                    if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
-                        st.error("All fields required. PIN must be 4 digits.")
-                    else:
-                        conn = sqlite3.connect("finagent_v6.db")
-                        cursor = conn.cursor()
-                        cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
-                        if cursor.fetchone():
-                            st.warning("Username, Email, or Mobile already registered.")
-                        else:
-                            hashed_pass = make_hashes(new_pass)
-                            cursor.execute('''
-                                INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?)
-                            ''', (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
-                            conn.commit()
-                            st.success("Registration complete! Switch to 'Sign In'.")
-                        conn.close()
-        
-        elif auth_mode == "Recover Access":
-            with st.form("recovery_form", clear_on_submit=True):
-                st.markdown("### 🔄 Reset Credentials")
-                rec_identifier = st.text_input("Username / Email / Mobile")
-                rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
-                rec_new_pass = st.text_input("Enter New Password", type="password")
-                submit_recovery = st.form_submit_button("Reset Password")
-                
-                if submit_recovery:
-                    conn = sqlite3.connect("finagent_v6.db")
-                    cursor = conn.cursor()
-                    cursor.execute('''
-                        SELECT username FROM users 
-                        WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
-                    ''', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
-                    result = cursor.fetchone()
-                    
-                    if result:
-                        hashed_new_pass = make_hashes(rec_new_pass)
-                        cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
-                        conn.commit()
-                        st.success("Password reset successfully! Switch to 'Sign In'.")
-                    else:
-                        st.error("Verification failed. Incorrect PIN or account.")
+                if result and check_hashes(login_pass, result[1]):
+                    cursor.execute('UPDATE users SET ip_address=?, device_info=? WHERE username=?', (client_ip, device_agent, result[0]))
+                    conn.commit()
                     conn.close()
-            
-            with st.form("lockout_alert_form", clear_on_submit=True):
-                st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both?</p>", unsafe_allow_html=True)
-                alert_user = st.text_input("Username / Email / Mobile")
-                submit_alert = st.form_submit_button("Request Emergency Access")
-                
-                if submit_alert:
-                    if not alert_user:
-                        st.error("Please enter identifying details.")
-                    else:
-                        conn_alert = sqlite3.connect("finagent_v6.db")
-                        cursor_alert = conn_alert.cursor()
-                        cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
-                        user_record = cursor_alert.fetchone()
-                        
-                        ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
-                        cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", 
-                                             (alert_user, ist_timestamp, "PENDING"))
-                        conn_alert.commit()
-                        conn_alert.close()
-                        
-                        if user_record and user_record[0]:
-                            send_emergency_email(user_record[0])
-                        
-                        st.success("🚨 Lockout protocol initiated!")
-                        st.info("📧 Credentials dispatched via SMTP to inbox.")
+                    st.session_state['logged_in'] = True
+                    st.session_state['username'] = result[0] 
+                    st.rerun()
+                else:
+                    conn.close()
+                    st.error("Access Denied: Invalid credentials.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+    elif auth_mode == "Sign Up":
+        with st.form("register_form", clear_on_submit=True):
+            st.markdown("### 📝 Request Clearance")
+            new_user = st.text_input("New Username *")
+            new_email = st.text_input("Gmail / Email Address *")
+            new_mobile = st.text_input("Mobile Number *")
+            new_pass = st.text_input("New Password *", type="password")
+            new_pin = st.text_input("4-Digit Recovery PIN *", max_chars=4, type="password")
+            submit_register = st.form_submit_button("Register Account")
+            
+            if submit_register:
+                if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
+                    st.error("All fields required. PIN must be 4 digits.")
+                else:
+                    conn = sqlite3.connect("finagent_v6.db")
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
+                    if cursor.fetchone():
+                        st.warning("Username/Email/Mobile already registered.")
+                    else:
+                        hashed_pass = make_hashes(new_pass)
+                        cursor.execute('INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                                       (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
+                        conn.commit()
+                        st.success("Registration complete! Switch to 'Sign In'.")
+                    conn.close()
+    
+    elif auth_mode == "Recover Access":
+        with st.form("recovery_form", clear_on_submit=True):
+            st.markdown("### 🔄 Reset Credentials")
+            rec_identifier = st.text_input("Username / Email / Mobile")
+            rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
+            rec_new_pass = st.text_input("Enter New Password", type="password")
+            submit_recovery = st.form_submit_button("Reset Password")
+            
+            if submit_recovery:
+                conn = sqlite3.connect("finagent_v6.db")
+                cursor = conn.cursor()
+                cursor.execute('SELECT username FROM users WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                result = cursor.fetchone()
+                
+                if result:
+                    hashed_new_pass = make_hashes(rec_new_pass)
+                    cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
+                    conn.commit()
+                    st.success("Password reset successfully! Switch to 'Sign In'.")
+                else:
+                    st.error("Verification failed. Incorrect PIN or account.")
+                conn.close()
+        
+        with st.form("lockout_alert_form", clear_on_submit=True):
+            st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both?</p>", unsafe_allow_html=True)
+            alert_user = st.text_input("Username / Email / Mobile")
+            submit_alert = st.form_submit_button("Request Emergency Access")
+            
+            if submit_alert:
+                if not alert_user:
+                    st.error("Please enter identifying details.")
+                else:
+                    conn_alert = sqlite3.connect("finagent_v6.db")
+                    cursor_alert = conn_alert.cursor()
+                    cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
+                    user_record = cursor_alert.fetchone()
+                    
+                    ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
+                    cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "PENDING"))
+                    conn_alert.commit()
+                    conn_alert.close()
+                    
+                    if user_record and user_record[0]:
+                        send_emergency_email(user_record[0])
+                    
+                    st.success("🚨 Lockout protocol initiated!")
+                    st.info("📧 Credentials dispatched via SMTP to inbox.")
+
+    # Extra info footer section below login
+    st.markdown("""
+        <div class="extra-info-box">
+            <p style="color: #94A3B8; font-size: 0.85rem; margin: 0;">
+                🔒 <b>Powered by Gemini 3.6 Flash & Zero-Trust SMTP Security</b> | Secure Multi-Tenant Architecture
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
     st.stop()
 
@@ -361,22 +307,17 @@ if st.session_state['logged_in']:
             color: #00E5FF;
             background-color: transparent;
             transition: all 0.3s ease;
-            box-shadow: 0 0 5px rgba(0, 229, 255, 0.1);
         }
         .stButton>button:hover {
             background-color: rgba(0, 229, 255, 0.1);
             color: #00E5FF;
-            border: 1px solid #00E5FF;
-            box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
         }
         
         [data-testid="stMetric"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
-            backdrop-filter: blur(12px);
             border: 1px solid rgba(0, 229, 255, 0.15);
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
         }
         </style>
         """, unsafe_allow_html=True)
@@ -422,7 +363,7 @@ if st.session_state['logged_in']:
                             conn_prof.close()
                             st.success("Profile successfully updated!")
                         except sqlite3.IntegrityError:
-                            st.error("That Email or Mobile is already registered to another user.")
+                            st.error("That Email or Mobile is already registered.")
 
         st.divider()
         st.header("⚙️ Global Parameters")
@@ -442,11 +383,10 @@ if st.session_state['logged_in']:
                 conn = sqlite3.connect("finagent_v6.db")
                 cursor = conn.cursor()
                 date_str = exp_date.strftime("%Y-%m-%d")
-                cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', 
-                               (st.session_state['username'], exp_category, exp_amount, date_str))
+                cursor.execute('INSERT INTO expenses (username, category, amount, date) VALUES (?, ?, ?, ?)', (st.session_state['username'], exp_category, exp_amount, date_str))
                 conn.commit()
                 conn.close()
-                st.success(f"Data injected: ₹{exp_amount} on {date_str}")
+                st.success(f"Data injected: ₹{exp_amount}")
                 st.rerun()
 
         if st.button("↩️ Rollback Last Entry", use_container_width=True):
@@ -484,8 +424,8 @@ if st.session_state['logged_in']:
                     <span style="color: rgba(0, 229, 255, 0.85); font-weight: bold; font-size: 16px;">Target Acquisition: {st.session_state['goal_name']}</span>
                     <span style="color: #E2E8F0; font-size: 14px; font-weight: bold;">₹{current_savings:,.0f} / ₹{goal_target:,.0f} ({progress_pct}%)</span>
                 </div>
-                <div style="background-color: #111827; border-radius: 8px; height: 14px; width: 100%; border: 1px solid rgba(0, 229, 255, 0.1); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-                    <div style="background: linear-gradient(90deg, #6b21a8, #00b8d4); width: {progress_pct}%; height: 100%; border-radius: 6px; box-shadow: 0 0 5px rgba(0, 229, 255, 0.25); transition: width 0.5s ease-in-out;"></div>
+                <div style="background-color: #111827; border-radius: 8px; height: 14px; width: 100%; border: 1px solid rgba(0, 229, 255, 0.1);">
+                    <div style="background: linear-gradient(90deg, #6b21a8, #00b8d4); width: {progress_pct}%; height: 100%; border-radius: 6px;"></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -495,7 +435,6 @@ if st.session_state['logged_in']:
             unique_days = df_all['date'].nunique()
             avg_daily_burn = total_expenses / unique_days if unique_days > 0 else total_expenses
             highest_spend_cat = df_all.groupby('category')['amount'].sum().idxmax()
-            
             st.markdown(f"""
             - **Average Daily Burn Rate:** ₹{avg_daily_burn:,.2f} / day
             - **Highest Capital Drain:** {highest_spend_cat}
@@ -514,10 +453,7 @@ if st.session_state['logged_in']:
             st.markdown("#### 📡 Capital Distribution")
             df_cat = df_all.groupby('category', as_index=False)['amount'].sum()
             fig = px.pie(df_cat, values="amount", names="category", hole=0.65, color_discrete_sequence=deep_tech_colors)
-            fig.update_traces(
-                textposition='inside', textinfo='percent+label',
-                marker=dict(line=dict(color='#070A15', width=3)), hoverinfo="label+percent+value"
-            )
+            fig.update_traces(textposition='inside', textinfo='percent+label')
             fig.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -525,15 +461,8 @@ if st.session_state['logged_in']:
             st.markdown("#### 📈 Burn Rate Trajectory")
             df_trend = df_all.groupby('date', as_index=False)['amount'].sum().sort_values('date')
             fig_trend = px.area(df_trend, x="date", y="amount", markers=True)
-            fig_trend.update_traces(
-                line_color="#00E5FF", fillcolor="rgba(0, 229, 255, 0.1)",
-                line=dict(shape='spline', smoothing=0.8), marker=dict(size=6, color="#00E5FF", line=dict(width=1.5, color="#070A15"))
-            )
-            fig_trend.update_layout(
-                hovermode="x unified", margin=dict(t=10, b=10, l=10, r=10),
-                xaxis=dict(showgrid=False, color="rgba(138, 43, 226, 0.6)"), yaxis=dict(showgrid=True, gridcolor="rgba(138, 43, 226, 0.1)", color="rgba(138, 43, 226, 0.6)"),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
-            )
+            fig_trend.update_traces(line_color="#00E5FF", fillcolor="rgba(0, 229, 255, 0.1)")
+            fig_trend.update_layout(hovermode="x unified", margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig_trend, use_container_width=True)
     else:
         st.info("Inject data to activate visualization algorithms.")
@@ -542,11 +471,4 @@ if st.session_state['logged_in']:
     st.markdown("#### 📓 Encrypted Ledger")
     if not df_all.empty:
         df_recent = df_all.sort_values(by="date", ascending=False).head(10)
-        st.dataframe(
-            df_recent, use_container_width=True, hide_index=True,
-            column_config={
-                "date": st.column_config.DateColumn("Timestamp", format="MMM DD, YYYY"),
-                "category": st.column_config.TextColumn("Classification"),
-                "amount": st.column_config.NumberColumn("Volume (₹)", format="₹%d")
-            }
-        )
+        st.dataframe(df_recent, use_container_width=True, hide_index=True)
