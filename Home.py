@@ -106,7 +106,7 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 
 # ==========================================
-#        AUTHENTICATION GATEWAY (STRICT BLOCK)
+#        AUTHENTICATION & LANDING GATEWAY
 # ==========================================
 if not st.session_state['logged_in']:
     st.markdown("""
@@ -117,7 +117,7 @@ if not st.session_state['logged_in']:
         [data-testid="stSidebar"] {display: none;}
         
         .auth-title {text-align: center; color: #00E5FF; font-size: 2.8rem; font-weight: 800; margin-bottom: 0px; letter-spacing: -1px;}
-        .auth-subtitle {text-align: center; color: #94A3B8; font-size: 1rem; margin-bottom: 35px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;}
+        .auth-subtitle {text-align: center; color: #94A3B8; font-size: 1rem; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;}
         
         div[data-testid="stForm"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 21, 0.95));
@@ -145,129 +145,150 @@ if not st.session_state['logged_in']:
         """, unsafe_allow_html=True)
     
     st.markdown("<h1 class='auth-title'>🛡️ FinAgent Enterprise Security</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='auth-subtitle'>Multi-Tenant Zero-Trust Telemetry Gateway</p>", unsafe_allow_html=True)
+    st.markdown("<p class='auth-subtitle'>Multi-Tenant Zero-Trust Telemetry & AI Financial Gateway</p>", unsafe_allow_html=True)
     
-    _, col_auth, _ = st.columns([1, 1.2, 1])
+    portal_mode = st.radio("Select Portal View:", ["🌟 Welcome & Project Overview", "🔐 Secure Authentication Terminal"], horizontal=True)
+    st.divider()
     
-    with col_auth:
-        auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
+    if portal_mode == "🌟 Welcome & Project Overview":
+        st.markdown("### 🚀 Welcome to FinAgent Intelligence Hub")
+        st.markdown("""
+        FinAgent is an elite production-grade multi-tenant financial intelligence platform styled with **Palantir Deep Tech** aesthetics. It empowers operators with autonomous AI insights, real-time capital burn tracking, secure zero-trust session management, and automated executive reporting.
+        """)
         
-        client_ip = st.context.ip_address or "127.0.0.1 (Local)"
-        device_agent = st.context.headers.get("User-Agent", "Unknown Device")
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            st.info("🤖 **Gemini 3.6 Flash AI**\n\nConversational multi-agent assistant with live SQL ledger context and CSV statement ingestion.")
+        with col_f2:
+            st.info("🚨 **Zero-Trust SMTP Lockout**\n\nAutomated emergency credential dispatch via Python `smtplib` to registered Gmail addresses.")
+        with col_f3:
+            st.info("📊 **Executive PDF Reports**\n\nAutomated ReportLab generation of publication-grade resume profiles and technical blueprints.")
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("👉 Proceed to Secure Authentication Terminal", use_container_width=True):
+            st.rerun()
+            
+    else:
+        _, col_auth, _ = st.columns([1, 1.2, 1])
         
-        if auth_mode == "Sign In":
-            with st.form("login_form", clear_on_submit=True):
-                st.markdown("### 🔐 Operator Login")
-                login_identifier = st.text_input("Username / Email / Mobile Number")
-                login_pass = st.text_input("Password", type="password")
-                submit_login = st.form_submit_button("Initialize Session")
-                
-                if submit_login:
-                    conn = sqlite3.connect("finagent_v6.db")
-                    cursor = conn.cursor()
-                    cursor.execute('''
-                        SELECT username, password FROM users 
-                        WHERE username=? OR email=? OR mobile=?
-                    ''', (login_identifier, login_identifier, login_identifier))
-                    result = cursor.fetchone()
+        with col_auth:
+            auth_mode = st.radio("Authorization Mode:", ["Sign In", "Sign Up", "Recover Access"], horizontal=True)
+            
+            client_ip = st.context.ip_address or "127.0.0.1 (Local)"
+            device_agent = st.context.headers.get("User-Agent", "Unknown Device")
+            
+            if auth_mode == "Sign In":
+                with st.form("login_form", clear_on_submit=True):
+                    st.markdown("### 🔐 Operator Login")
+                    login_identifier = st.text_input("Username / Email / Mobile Number")
+                    login_pass = st.text_input("Password", type="password")
+                    submit_login = st.form_submit_button("Initialize Session")
                     
-                    if result and check_hashes(login_pass, result[1]):
-                        cursor.execute('UPDATE users SET ip_address=?, device_info=? WHERE username=?', 
-                                       (client_ip, device_agent, result[0]))
-                        conn.commit()
-                        conn.close()
-                        
-                        st.session_state['logged_in'] = True
-                        st.session_state['username'] = result[0] 
-                        st.rerun()
-                    else:
-                        conn.close()
-                        st.error("Access Denied: Invalid credentials or account not found.")
-
-        elif auth_mode == "Sign Up":
-            with st.form("register_form", clear_on_submit=True):
-                st.markdown("### 📝 Request Clearance")
-                new_user = st.text_input("New Username *")
-                new_email = st.text_input("Gmail / Email Address *")
-                new_mobile = st.text_input("Mobile Number *")
-                new_pass = st.text_input("New Password *", type="password")
-                new_pin = st.text_input("Set a 4-Digit Recovery PIN *", max_chars=4, type="password")
-                submit_register = st.form_submit_button("Register Account")
-                
-                if submit_register:
-                    if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
-                        st.error("All fields are required. Ensure PIN is exactly 4 digits.")
-                    else:
+                    if submit_login:
                         conn = sqlite3.connect("finagent_v6.db")
                         cursor = conn.cursor()
-                        cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
-                        if cursor.fetchone():
-                            st.warning("Username, Email, or Mobile Number is already registered.")
-                        else:
-                            hashed_pass = make_hashes(new_pass)
-                            cursor.execute('''
-                                INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?)
-                            ''', (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
+                        cursor.execute('''
+                            SELECT username, password FROM users 
+                            WHERE username=? OR email=? OR mobile=?
+                        ''', (login_identifier, login_identifier, login_identifier))
+                        result = cursor.fetchone()
+                        
+                        if result and check_hashes(login_pass, result[1]):
+                            cursor.execute('UPDATE users SET ip_address=?, device_info=? WHERE username=?', 
+                                           (client_ip, device_agent, result[0]))
                             conn.commit()
-                            st.success("Registration complete. Please switch to 'Sign In'.")
-                        conn.close()
-        
-        elif auth_mode == "Recover Access":
-            with st.form("recovery_form", clear_on_submit=True):
-                st.markdown("### 🔄 Reset Credentials")
-                st.info("Enter your identifying details and your 4-Digit Recovery PIN to create a new password.")
-                rec_identifier = st.text_input("Registered Username / Email / Mobile")
-                rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
-                rec_new_pass = st.text_input("Enter New Password", type="password")
-                submit_recovery = st.form_submit_button("Reset Password")
-                
-                if submit_recovery:
-                    conn = sqlite3.connect("finagent_v6.db")
-                    cursor = conn.cursor()
-                    cursor.execute('''
-                        SELECT username FROM users 
-                        WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
-                    ''', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
-                    result = cursor.fetchone()
-                    
-                    if result:
-                        hashed_new_pass = make_hashes(rec_new_pass)
-                        cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
-                        conn.commit()
-                        st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
-                    else:
-                        st.error("Verification failed. Account not found or incorrect PIN.")
-                    conn.close()
-            
-            with st.form("lockout_alert_form", clear_on_submit=True):
-                st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both password and PIN?</p>", unsafe_allow_html=True)
-                st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your details to notify admin, trigger SMTP email dispatch, and generate temporary fallback credentials.</p>", unsafe_allow_html=True)
-                
-                alert_user = st.text_input("Your Username / Email / Mobile")
-                submit_alert = st.form_submit_button("Request Emergency Temporary Access")
-                
-                if submit_alert:
-                    if not alert_user:
-                        st.error("Please enter your identifying details.")
-                    else:
-                        conn_alert = sqlite3.connect("finagent_v6.db")
-                        cursor_alert = conn_alert.cursor()
-                        cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
-                        user_record = cursor_alert.fetchone()
-                        
-                        cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", 
-                                             (alert_user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "PENDING"))
-                        conn_alert.commit()
-                        conn_alert.close()
-                        
-                        if user_record and user_record[0]:
-                            send_emergency_email(user_record[0])
-                        
-                        st.success("🚨 Emergency Lockout Protocol Initiated!")
-                        st.info("📧 **Secure Dispatch Complete:** Temporary fallback credentials have been successfully sent to your registered Gmail address via SMTP. Please check your inbox.")
+                            conn.close()
+                            
+                            st.session_state['logged_in'] = True
+                            st.session_state['username'] = result[0] 
+                            st.rerun()
+                        else:
+                            conn.close()
+                            st.error("Access Denied: Invalid credentials or account not found.")
 
-    # Stop execution here so dashboard content never leaks out on the auth screen
+            elif auth_mode == "Sign Up":
+                with st.form("register_form", clear_on_submit=True):
+                    st.markdown("### 📝 Request Clearance")
+                    new_user = st.text_input("New Username *")
+                    new_email = st.text_input("Gmail / Email Address *")
+                    new_mobile = st.text_input("Mobile Number *")
+                    new_pass = st.text_input("New Password *", type="password")
+                    new_pin = st.text_input("Set a 4-Digit Recovery PIN *", max_chars=4, type="password")
+                    submit_register = st.form_submit_button("Register Account")
+                    
+                    if submit_register:
+                        if not new_user or not new_email or not new_mobile or not new_pass or len(new_pin) != 4:
+                            st.error("All fields are required. Ensure PIN is exactly 4 digits.")
+                        else:
+                            conn = sqlite3.connect("finagent_v6.db")
+                            cursor = conn.cursor()
+                            cursor.execute('SELECT username FROM users WHERE username=? OR email=? OR mobile=?', (new_user, new_email, new_mobile))
+                            if cursor.fetchone():
+                                st.warning("Username, Email, or Mobile Number is already registered.")
+                            else:
+                                hashed_pass = make_hashes(new_pass)
+                                cursor.execute('''
+                                    INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                ''', (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
+                                conn.commit()
+                                st.success("Registration complete. Please switch to 'Sign In'.")
+                            conn.close()
+            
+            elif auth_mode == "Recover Access":
+                with st.form("recovery_form", clear_on_submit=True):
+                    st.markdown("### 🔄 Reset Credentials")
+                    st.info("Enter your identifying details and your 4-Digit Recovery PIN to create a new password.")
+                    rec_identifier = st.text_input("Registered Username / Email / Mobile")
+                    rec_pin = st.text_input("4-Digit Recovery PIN", max_chars=4, type="password")
+                    rec_new_pass = st.text_input("Enter New Password", type="password")
+                    submit_recovery = st.form_submit_button("Reset Password")
+                    
+                    if submit_recovery:
+                        conn = sqlite3.connect("finagent_v6.db")
+                        cursor = conn.cursor()
+                        cursor.execute('''
+                            SELECT username FROM users 
+                            WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?
+                        ''', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                        result = cursor.fetchone()
+                        
+                        if result:
+                            hashed_new_pass = make_hashes(rec_new_pass)
+                            cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
+                            conn.commit()
+                            st.success("Password reset successfully! Switch to 'Sign In' to access your dashboard.")
+                        else:
+                            st.error("Verification failed. Account not found or incorrect PIN.")
+                        conn.close()
+                
+                with st.form("lockout_alert_form", clear_on_submit=True):
+                    st.markdown("<p style='color: #FF007F; font-weight: bold; margin-bottom: 0px;'>🚨 Forgot both password and PIN?</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='color: #E2E8F0; font-size: 12px; margin-bottom: 10px;'>Submit your details to notify admin, trigger SMTP email dispatch, and generate temporary fallback credentials.</p>", unsafe_allow_html=True)
+                    
+                    alert_user = st.text_input("Your Username / Email / Mobile")
+                    submit_alert = st.form_submit_button("Request Emergency Temporary Access")
+                    
+                    if submit_alert:
+                        if not alert_user:
+                            st.error("Please enter your identifying details.")
+                        else:
+                            conn_alert = sqlite3.connect("finagent_v6.db")
+                            cursor_alert = conn_alert.cursor()
+                            cursor_alert.execute("SELECT email FROM users WHERE username=? OR email=? OR mobile=?", (alert_user, alert_user, alert_user))
+                            user_record = cursor_alert.fetchone()
+                            
+                            cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", 
+                                                 (alert_user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "PENDING"))
+                            conn_alert.commit()
+                            conn_alert.close()
+                            
+                            if user_record and user_record[0]:
+                                send_emergency_email(user_record[0])
+                            
+                            st.success("🚨 Emergency Lockout Protocol Initiated!")
+                            st.info("📧 **Secure Dispatch Complete:** Temporary fallback credentials have been successfully sent to your registered Gmail address via SMTP. Please check your inbox.")
+
     st.stop()
 
 # ==========================================
