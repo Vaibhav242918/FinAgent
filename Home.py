@@ -119,6 +119,8 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 if 'show_recovery' not in st.session_state:
     st.session_state['show_recovery'] = False
+if 'login_failed' not in st.session_state:
+    st.session_state['login_failed'] = False
 
 # ==========================================
 #        PROFESSIONAL AUTH GATEWAY
@@ -221,6 +223,7 @@ if not st.session_state['logged_in']:
                         cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
                         conn.commit()
                         st.success("Password reset successfully! You can now return and log in.")
+                        st.session_state['login_failed'] = False
                     else:
                         st.error("❌ Verification failed. Incorrect PIN or account.")
                     conn.close()
@@ -258,6 +261,7 @@ if not st.session_state['logged_in']:
                             
                             st.success("🚨 Unique Emergency Credentials Generated & Dispatched!")
                             st.info(f"📧 New credentials saved to database and sent via SMTP to {user_email}.")
+                            st.session_state['login_failed'] = False
                         else:
                             conn_alert.close()
                             st.error("❌ Account not found in telemetry registry.")
@@ -265,6 +269,7 @@ if not st.session_state['logged_in']:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🔙 Back to Sign In"):
             st.session_state['show_recovery'] = False
+            st.session_state['login_failed'] = False
             st.rerun()
 
     else:
@@ -291,17 +296,21 @@ if not st.session_state['logged_in']:
                         conn.close()
                         st.session_state['logged_in'] = True
                         st.session_state['username'] = result[0] 
+                        st.session_state['login_failed'] = False
                         st.rerun()
                     else:
                         conn.close()
+                        st.session_state['login_failed'] = True
                         st.error("❌ Access Denied: Invalid credentials or account not found.")
             
-            st.markdown("<br>", unsafe_allow_html=True)
-            col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
-            with col_f2:
-                if st.button("🔑 Forgot Password / Recover Access?", use_container_width=True):
-                    st.session_state['show_recovery'] = True
-                    st.rerun()
+            # Show Forgot Password button ONLY when login fails (invalid credentials entered)
+            if st.session_state['login_failed']:
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
+                with col_f2:
+                    if st.button("🔑 Forgot Password / Recover Access?", use_container_width=True):
+                        st.session_state['show_recovery'] = True
+                        st.rerun()
 
         elif auth_mode == "Sign Up":
             with st.form("register_form", clear_on_submit=True):
@@ -391,6 +400,7 @@ if st.session_state['logged_in']:
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state['logged_in'] = False
             st.session_state['username'] = ''
+            st.session_state['login_failed'] = False
             st.rerun()
             
     st.divider()
