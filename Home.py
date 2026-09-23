@@ -234,7 +234,7 @@ if not st.session_state['logged_in']:
     client_ip = st.context.ip_address or "127.0.0.1 (Local)"
     device_agent = st.context.headers.get("User-Agent", "Unknown Device")
     
-    # --- DEDICATED RECOVERY PORTAL (FULL PAGE OVERRIDE) ---
+    # --- DEDICATED RECOVERY PORTAL ---
     if st.session_state['show_recovery']:
         st.markdown("<h3 style='color: #00E5FF; text-align: center;'>🔄 Account Recovery Portal</h3>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #94A3B8;'>Reset your password using your 4-digit PIN or request emergency SMTP credentials.</p>", unsafe_allow_html=True)
@@ -497,7 +497,7 @@ if st.session_state['logged_in']:
         st.divider()
         st.header("📝 Data Ingestion")
         with st.form("expense_form", clear_on_submit=True):
-            exp_date = st.date_input("Date", datetime.now()) 
+            exp_date = st.date_input("Date", value=datetime.now(), max_value=datetime.now()) 
             exp_category = st.selectbox("Category", ["Food", "Shopping", "Transport", "Bills", "Entertainment"])
             exp_amount = st.number_input("Amount (₹)", min_value=1.0, step=100.0)
             submitted = st.form_submit_button("Inject Data", use_container_width=True)
