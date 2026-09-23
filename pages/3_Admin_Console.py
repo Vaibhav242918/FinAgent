@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import sqlite3
 import hashlib
-from datetime import datetime  # 👈 Added missing datetime import
+from datetime import datetime
 
 # --- SECURITY: Password Hashing ---
 def make_hashes(password):
@@ -53,7 +53,7 @@ st.info(f"Authenticated Operator: **{st.session_state['username']}** | Active Da
 
 st.divider()
 
-# Organize Admin Tabs
+# Organize Admin Tabs (Removed User Credentials override tab since recovery is now automated)
 tab_users, tab_alerts, tab_data, tab_backup = st.tabs([
     "👥 User Credentials", 
     "🚨 Support Alerts", 
@@ -61,39 +61,14 @@ tab_users, tab_alerts, tab_data, tab_backup = st.tabs([
     "💾 Database Download"
 ])
 
-# --- TAB 1: USER CREDENTIALS & OVERRIDE ---
+# --- TAB 1: USER CREDENTIALS (READ-ONLY OVERSIGHT) ---
 with tab_users:
     st.markdown("#### 📋 Registered Operators & Telemetry Logs")
+    st.info("Note: Manual credential overrides have been deprecated in favor of Zero-Trust automated SMTP recovery.")
     conn_admin = sqlite3.connect("finagent_v6.db")
     df_users = pd.read_sql_query("SELECT username, email, mobile, password, ip_address, device_info FROM users", conn_admin)
     conn_admin.close()
     st.dataframe(df_users, use_container_width=True)
-    
-    st.markdown("---")
-    st.markdown("#### 🛠️ Administrator Account Override")
-    with st.form("admin_reset_form", clear_on_submit=True):
-        target_user = st.text_input("Enter Username to Reset")
-        new_temp_pass = st.text_input("New Temporary Password", type="password")
-        new_temp_pin = st.text_input("New 4-Digit Recovery PIN", max_chars=4, type="password")
-        submit_admin_reset = st.form_submit_button("Force Reset User Credentials")
-        
-        if submit_admin_reset:
-            if not target_user or not new_temp_pass or len(new_temp_pin) != 4:
-                st.error("Provide a username, new password, and a valid 4-digit PIN.")
-            else:
-                conn_admin = sqlite3.connect("finagent_v6.db")
-                cursor_admin = conn_admin.cursor()
-                cursor_admin.execute("SELECT username FROM users WHERE username=?", (target_user,))
-                if cursor_admin.fetchone():
-                    hashed_pw = make_hashes(new_temp_pass)
-                    cursor_admin.execute("UPDATE users SET password=?, recovery_pin=? WHERE username=?", 
-                                         (hashed_pw, new_temp_pin, target_user))
-                    conn_admin.commit()
-                    conn_admin.close()
-                    st.success(f"Successfully force-reset credentials for operator: {target_user}!")
-                else:
-                    conn_admin.close()
-                    st.error("Target operator not found in database.")
 
 # --- TAB 2: SUPPORT ALERTS QUEUE ---
 with tab_alerts:
