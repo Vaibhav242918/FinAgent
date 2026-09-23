@@ -9,7 +9,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import pandas as pd
+import numpy as np
 import plotly.express as px
+from sklearn.linear_model import LinearRegression
 
 # --- SECURITY: Password Hashing ---
 def make_hashes(password):
@@ -22,6 +24,42 @@ def check_hashes(password, hashed_text):
 def is_valid_email(email):
     pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     return re.match(pattern, email) is not None
+
+# --- MACHINE LEARNING ANALYTICS UTILITIES ---
+def predict_future_burn(df_all):
+    if df_all.empty or len(df_all['date'].unique()) < 2:
+        return 0.0
+    df_sorted = df_all.groupby('date', as_index=False)['amount'].sum()
+    df_sorted['day_index'] = np.arange(len(df_sorted))
+    X = df_sorted[['day_index']]
+    y = df_sorted['amount']
+    model = LinearRegression()
+    model.fit(X, y)
+    next_day = np.array([[len(df_sorted)]])
+    predicted_spend = model.predict(next_day)[0]
+    return max(0.0, predicted_spend)
+
+def estimate_goal_completion(monthly_income, total_expenses, goal_target):
+    monthly_savings = monthly_income - total_expenses
+    if monthly_savings <= 0:
+        return "Infinite (Deficit Burn)"
+    daily_savings = monthly_savings / 30.0
+    days_needed = goal_target / daily_savings
+    completion_date = datetime.now() + timedelta(days=int(days_needed))
+    return f"{completion_date.strftime('%B %d, %Y')} (~{int(days_needed)} days)"
+
+def calculate_financial_health_score(monthly_income, total_expenses):
+    if monthly_income <= 0:
+        return 0, "Uncalibrated"
+    savings_ratio = ((monthly_income - total_expenses) / monthly_income) * 100
+    if savings_ratio >= 50:
+        return 95, "💎 Elite Wealth Builder"
+    elif savings_ratio >= 25:
+        return 75, "🛡️ Balanced Operator"
+    elif savings_ratio > 0:
+        return 50, "⚠️ Moderate Burn Risk"
+    else:
+        return 20, "🚨 Critical Deficit"
 
 # --- GENERATE UNIQUE TEMPORARY CREDENTIALS ---
 def generate_temp_credentials():
@@ -43,7 +81,7 @@ def send_emergency_email(to_email, temp_pwd, temp_pin):
     Hello Operator,
     
     An emergency access request was initiated for your FinAgent account.
-    Your unique temporary fallback credentials are:
+    Your unique secure temporary credentials are:
     
     - Temporary Password: {temp_pwd}
     - Temporary Recovery PIN: {temp_pin}
@@ -493,6 +531,11 @@ if st.session_state['logged_in']:
     current_savings = st.session_state['monthly_income'] - total_expenses
     goal_target = max(1, st.session_state['goal_target'])
 
+    # ML Calculations
+    predicted_burn = predict_future_burn(df_all)
+    goal_timeline = estimate_goal_completion(st.session_state['monthly_income'], total_expenses, goal_target)
+    health_score, health_cluster = calculate_financial_health_score(st.session_state['monthly_income'], total_expenses)
+
     with st.container():
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -515,18 +558,15 @@ if st.session_state['logged_in']:
             </div>
         """, unsafe_allow_html=True)
 
-    if not df_all.empty:
-        with st.expander("🔬 Advanced Statistical Telemetry", expanded=False):
-            unique_days = df_all['date'].nunique()
-            avg_daily_burn = total_expenses / unique_days if unique_days > 0 else total_expenses
-            highest_spend_cat = df_all.groupby('category')['amount'].sum().idxmax()
-            st.markdown(f"""
-            - **Average Daily Burn Rate:** ₹{avg_daily_burn:,.2f} / day
-            - **Highest Capital Drain:** {highest_spend_cat}
-            - **Data Points Analyzed:** {len(df_all)} transactions across {unique_days} unique days.
-            """)
-    else:
-        st.info("Awaiting telemetry data...")
+    # --- ADVANCED ML & STATISTICAL TELEMETRY ---
+    with st.expander("🤖 Autonomous AI & Statistical Telemetry (ML Insights)", expanded=True):
+        mcol1, mcol2, mcol3 = st.columns(3)
+        with mcol1:
+            st.metric(label="AI Health Cluster Score", value=f"{health_score}/100", delta=health_cluster)
+        with mcol2:
+            st.metric(label="Predicted Next-Day Burn (ML)", value=f"₹{predicted_burn:,.2f}")
+        with mcol3:
+            st.metric(label="Est. Goal Timeline (Linear Model)", value=goal_timeline)
 
     st.divider()
 
