@@ -229,8 +229,8 @@ if not st.session_state['logged_in']:
                     conn.close()
         else:
             with st.form("lockout_alert_form", clear_on_submit=True):
-                st.markdown("##### 🚨 Emergency SMTP Support (Unique Credentials)")
-                st.info("If you lost both, a unique temporary password and PIN will be generated, saved in the database, and emailed to you.")
+                st.markdown("##### 🚨 Emergency SMTP Support (Hashed Credentials)")
+                st.info("If you lost both, unique secure temporary credentials will be generated, hashed, and emailed to you.")
                 alert_user = st.text_input("Username / Email / Mobile", key="alert_id_input")
                 submit_alert = st.form_submit_button("Dispatch Unique Emergency Credentials")
                 
@@ -248,11 +248,12 @@ if not st.session_state['logged_in']:
                             
                             t_pwd, t_pin = generate_temp_credentials()
                             hashed_t_pwd = make_hashes(t_pwd)
+                            hashed_t_pin = make_hashes(t_pin)  # Securely hashing temporary PIN as well
                             
-                            cursor_alert.execute("UPDATE users SET password=?, recovery_pin=? WHERE username=?", (hashed_t_pwd, t_pin, username_found))
+                            cursor_alert.execute("UPDATE users SET password=?, recovery_pin=? WHERE username=?", (hashed_t_pwd, hashed_t_pin, username_found))
                             
                             ist_timestamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
-                            cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, f"RESOLVED (Temp PWD: {t_pwd} | PIN: {t_pin})"))
+                            cursor_alert.execute("INSERT INTO support_alerts (identifier, timestamp, status) VALUES (?, ?, ?)", (alert_user, ist_timestamp, "RESOLVED (Secure Hashed Credentials Dispatched)"))
                             conn_alert.commit()
                             conn_alert.close()
                             
@@ -260,7 +261,7 @@ if not st.session_state['logged_in']:
                                 send_emergency_email(user_email, t_pwd, t_pin)
                             
                             st.success("🚨 Unique Emergency Credentials Generated & Dispatched!")
-                            st.info(f"📧 New credentials saved to database and sent via SMTP to {user_email}.")
+                            st.info(f"📧 New secure credentials sent via SMTP to {user_email}.")
                             st.session_state['login_failed'] = False
                         else:
                             conn_alert.close()
@@ -345,8 +346,9 @@ if not st.session_state['logged_in']:
                             st.warning("⚠️ Username, Email, or Mobile Number is already registered in the system.")
                         else:
                             hashed_pass = make_hashes(new_pass)
+                            hashed_pin = make_hashes(new_pin)  # Secure hash for PIN storage
                             cursor.execute('INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                                           (new_user, new_email, new_mobile, hashed_pass, new_pin, client_ip, device_agent))
+                                           (new_user, new_email, new_mobile, hashed_pass, hashed_pin, client_ip, device_agent))
                             conn.commit()
                             st.success("✅ Registration complete! Please switch to 'Sign In' tab.")
                         conn.close()
@@ -368,10 +370,6 @@ if st.session_state['logged_in']:
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
-        .main-container {
-            padding: 1rem 2rem;
-        }
-        
         .stButton>button {
             border-radius: 6px;
             font-weight: bold;
@@ -383,26 +381,23 @@ if st.session_state['logged_in']:
         .stButton>button:hover {
             background-color: rgba(0, 229, 255, 0.1);
             color: #00E5FF;
-            border-color: #00E5FF;
         }
         
         [data-testid="stMetric"] {
-            background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95));
-            border: 1px solid rgba(0, 229, 255, 0.2);
-            border-radius: 12px;
-            padding: 22px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
         }
         </style>
         """, unsafe_allow_html=True)
 
-    # Clean Header Section with Proper Spacing
-    col_h1, col_h2 = st.columns([6, 1])
+    col_h1, col_h2 = st.columns([5, 1])
     with col_h1:
-        st.markdown(f"<h2 style='color: #00E5FF; margin-bottom: 2px;'>🧠 FinAgent: Telemetry Hub</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color: #94A3B8; margin-top: 0px; font-size: 0.95rem;'>Active Operator: <b>{st.session_state['username']}</b></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color: #00E5FF; margin: 0;'>🧠 FinAgent: Telemetry Hub</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: #94A3B8; margin: 0; font-size: 0.95rem;'>Active Operator: <b>{st.session_state['username']}</b></p>", unsafe_allow_html=True)
     with col_h2:
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state['logged_in'] = False
             st.session_state['username'] = ''
@@ -509,7 +504,7 @@ if st.session_state['logged_in']:
         
         progress_pct = min(100, max(0, int((current_savings / goal_target) * 100)))
         st.markdown(f"""
-            <div style="background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95)); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 22px; margin-top: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);">
+            <div style="background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95)); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                     <span style="color: #00E5FF; font-weight: bold; font-size: 16px;">Target Acquisition: {st.session_state['goal_name']}</span>
                     <span style="color: #E2E8F0; font-size: 14px; font-weight: bold;">₹{current_savings:,.0f} / ₹{goal_target:,.0f} ({progress_pct}%)</span>
