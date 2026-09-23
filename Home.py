@@ -110,7 +110,7 @@ def init_db():
 init_db()
 
 # 1. Page Configuration
-st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="centered")
+st.set_page_config(page_title="FinAgent - Executive AI Gateway", page_icon="🛡️", layout="wide")
 
 # --- PERSISTENT SESSION STATE MANAGEMENT ---
 if 'logged_in' not in st.session_state:
@@ -136,7 +136,7 @@ if not st.session_state['logged_in']:
         .block-container {
             padding-top: 3rem !important;
             padding-bottom: 2rem !important;
-            max-width: 750px !important;
+            max-width: 650px !important;
         }
         
         .hero-title {
@@ -144,15 +144,15 @@ if not st.session_state['logged_in']:
             background: linear-gradient(90deg, #00E5FF, #8A2BE2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 2.8rem; 
+            font-size: 2.5rem; 
             font-weight: 900; 
-            margin-bottom: 5px; 
+            margin-bottom: 0px; 
         }
         .hero-subtitle {
             text-align: center; 
             color: #94A3B8; 
-            font-size: 1rem; 
-            margin-bottom: 30px; 
+            font-size: 0.9rem; 
+            margin-bottom: 25px; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
         }
@@ -160,8 +160,8 @@ if not st.session_state['logged_in']:
         div[data-testid="stForm"] {
             background: linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(7, 10, 21, 0.98));
             border: 1px solid rgba(0, 229, 255, 0.3);
-            border-radius: 14px;
-            padding: 35px;
+            border-radius: 12px;
+            padding: 25px;
             box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
         }
         
@@ -170,7 +170,7 @@ if not st.session_state['logged_in']:
             border: 1px solid rgba(138, 43, 226, 0.3);
             border-radius: 10px;
             padding: 15px;
-            margin-top: 25px;
+            margin-top: 20px;
             text-align: center;
         }
         
@@ -182,7 +182,6 @@ if not st.session_state['logged_in']:
             background-color: transparent;
             transition: all 0.3s ease;
             width: 100%;
-            padding: 0.5rem 1rem;
         }
         .stButton>button:hover {
             background-color: #00E5FF;
@@ -304,7 +303,6 @@ if not st.session_state['logged_in']:
                         st.session_state['login_failed'] = True
                         st.error("❌ Access Denied: Invalid credentials or account not found.")
             
-            # Show Forgot Password button ONLY when login fails (invalid credentials entered)
             if st.session_state['login_failed']:
                 st.markdown("<br>", unsafe_allow_html=True)
                 col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
@@ -355,7 +353,7 @@ if not st.session_state['logged_in']:
 
     st.markdown("""
         <div class="extra-info-box">
-            <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">
+            <p style="color: #94A3B8; font-size: 0.85rem; margin: 0;">
                 🔒 <b>Powered by Gemini 3.6 Flash & Zero-Trust SMTP Security</b>
             </p>
         </div>
@@ -370,6 +368,10 @@ if st.session_state['logged_in']:
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
+        .main-container {
+            padding: 1rem 2rem;
+        }
+        
         .stButton>button {
             border-radius: 6px;
             font-weight: bold;
@@ -381,23 +383,26 @@ if st.session_state['logged_in']:
         .stButton>button:hover {
             background-color: rgba(0, 229, 255, 0.1);
             color: #00E5FF;
+            border-color: #00E5FF;
         }
         
         [data-testid="stMetric"] {
-            background: linear-gradient(145deg, rgba(17, 24, 39, 0.7), rgba(7, 10, 21, 0.9));
-            border: 1px solid rgba(0, 229, 255, 0.15);
-            border-radius: 10px;
-            padding: 20px;
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95));
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
         }
         </style>
         """, unsafe_allow_html=True)
 
-    col_h1, col_h2 = st.columns([5, 1])
+    # Clean Header Section with Proper Spacing
+    col_h1, col_h2 = st.columns([6, 1])
     with col_h1:
-        st.markdown(f"<h2 style='color: #00E5FF; margin: 0;'>🧠 FinAgent: Telemetry Hub</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color: #94A3B8; margin: 0; font-size: 0.95rem;'>Active Operator: <b>{st.session_state['username']}</b></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color: #00E5FF; margin-bottom: 2px;'>🧠 FinAgent: Telemetry Hub</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: #94A3B8; margin-top: 0px; font-size: 0.95rem;'>Active Operator: <b>{st.session_state['username']}</b></p>", unsafe_allow_html=True)
     with col_h2:
-        st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state['logged_in'] = False
             st.session_state['username'] = ''
@@ -504,7 +509,7 @@ if st.session_state['logged_in']:
         
         progress_pct = min(100, max(0, int((current_savings / goal_target) * 100)))
         st.markdown(f"""
-            <div style="background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95)); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);">
+            <div style="background: linear-gradient(145deg, rgba(17, 24, 39, 0.85), rgba(7, 10, 21, 0.95)); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 22px; margin-top: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                     <span style="color: #00E5FF; font-weight: bold; font-size: 16px;">Target Acquisition: {st.session_state['goal_name']}</span>
                     <span style="color: #E2E8F0; font-size: 14px; font-weight: bold;">₹{current_savings:,.0f} / ₹{goal_target:,.0f} ({progress_pct}%)</span>
