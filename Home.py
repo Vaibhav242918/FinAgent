@@ -215,10 +215,10 @@ if not st.session_state['logged_in']:
                 if submit_recovery:
                     conn = sqlite3.connect("finagent_v6.db")
                     cursor = conn.cursor()
-                    cursor.execute('SELECT username FROM users WHERE (username=? OR email=? OR mobile=?) AND recovery_pin=?', (rec_identifier, rec_identifier, rec_identifier, rec_pin))
+                    cursor.execute('SELECT username, recovery_pin FROM users WHERE (username=? OR email=? OR mobile=?)', (rec_identifier, rec_identifier, rec_identifier))
                     result = cursor.fetchone()
                     
-                    if result:
+                    if result and check_hashes(rec_pin, result[1]):
                         hashed_new_pass = make_hashes(rec_new_pass)
                         cursor.execute('UPDATE users SET password=? WHERE username=?', (hashed_new_pass, result[0]))
                         conn.commit()
@@ -248,7 +248,7 @@ if not st.session_state['logged_in']:
                             
                             t_pwd, t_pin = generate_temp_credentials()
                             hashed_t_pwd = make_hashes(t_pwd)
-                            hashed_t_pin = make_hashes(t_pin)  # Securely hashing temporary PIN as well
+                            hashed_t_pin = make_hashes(t_pin)
                             
                             cursor_alert.execute("UPDATE users SET password=?, recovery_pin=? WHERE username=?", (hashed_t_pwd, hashed_t_pin, username_found))
                             
@@ -346,7 +346,7 @@ if not st.session_state['logged_in']:
                             st.warning("⚠️ Username, Email, or Mobile Number is already registered in the system.")
                         else:
                             hashed_pass = make_hashes(new_pass)
-                            hashed_pin = make_hashes(new_pin)  # Secure hash for PIN storage
+                            hashed_pin = make_hashes(new_pin)
                             cursor.execute('INSERT INTO users (username, email, mobile, password, recovery_pin, ip_address, device_info) VALUES (?, ?, ?, ?, ?, ?, ?)', 
                                            (new_user, new_email, new_mobile, hashed_pass, hashed_pin, client_ip, device_agent))
                             conn.commit()
